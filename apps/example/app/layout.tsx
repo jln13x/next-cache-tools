@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { NextCacheToolsDevtools } from "next-cache-tools/devtools";
-import { Suspense } from "react";
+import { CacheDevTools } from "next-cache-tools/devtools";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,10 +28,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Suspense fallback={<div>Loading...</div>}>
-          {children}
-          <NextCacheToolsDevtools />
-        </Suspense>
+        {children}
+        <CacheDevTools />
       </body>
     </html>
   );

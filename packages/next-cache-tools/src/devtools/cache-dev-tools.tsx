@@ -8,7 +8,7 @@ interface TagWithData {
   data: TagData[];
 }
 
-export async function NextCacheToolsDevtools() {
+export async function CacheDevTools() {
   if (process.env["NODE_ENV"] !== "development") {
     return null;
   }

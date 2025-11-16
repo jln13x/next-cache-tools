@@ -1,1 +1,1 @@
-export { NextCacheToolsDevtools } from "./cache-tags-panel";
+export { CacheDevTools } from "./cache-dev-tools";

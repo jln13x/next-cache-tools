@@ -29,7 +29,7 @@ export default nextConfig;
 Add the devtools component to your root layout:
 
 ```typescript
-import { NextCacheToolsDevtools } from "next-cache-tools/devtools";
+import { CacheDevTools } from "next-cache-tools/devtools";
 import { Suspense } from "react";
 
 export default function RootLayout({
@@ -41,9 +41,7 @@ export default function RootLayout({
     <html>
       <body>
         {children}
-        <Suspense>
-          <NextCacheToolsDevtools />
-        </Suspense>
+        <CacheDevTools />
       </body>
     </html>
   );
