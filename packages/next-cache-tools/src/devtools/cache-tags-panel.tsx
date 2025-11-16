@@ -46,11 +46,8 @@ function Panel({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  const [revalidatedTags, setRevalidatedTags] = useState<Map<string, number>>(
+  const [invalidatedTags, setInvalidatedTags] = useState<Map<string, number>>(
     new Map(),
-  );
-  const [pendingRevalidations, setPendingRevalidations] = useState<Set<string>>(
-    new Set(),
   );
   const [tagsWithData, setTagsWithData] = useState<Set<string>>(
     new Set(initialTags.filter((t) => t.data.length > 0).map((t) => t.tag)),
@@ -100,18 +97,18 @@ function Panel({
     setExpandedGroups(newExpanded);
   };
 
-  const handleTagRevalidated = (tag: string) => {
+  const handleTagInvalidated = (tag: string) => {
     const now = Date.now();
-    setRevalidatedTags((prev) => {
+    setInvalidatedTags((prev) => {
       const newMap = new Map(prev);
       newMap.set(tag, now);
       return newMap;
     });
   };
 
-  const handleRevalidateAll = () => {
+  const handleInvalidateAll = () => {
     const now = Date.now();
-    setRevalidatedTags((prev) => {
+    setInvalidatedTags((prev) => {
       const newMap = new Map(prev);
       filteredTags.forEach(({ tag }) => {
         newMap.set(tag, now);
@@ -167,7 +164,7 @@ function Panel({
       <div className="flex justify-between items-center mb-2">
         <h2 className="m-0 text-white">Cache Tags</h2>
         <div className="flex gap-2 items-center">
-          <RevalidateAllButton onRevalidated={handleRevalidateAll} />
+          <RevalidateAllButton onInvalidated={handleInvalidateAll} />
           <RefreshButton />
           <Button
             variant="secondary"
@@ -198,8 +195,7 @@ function Panel({
                       <Tag
                         tag={tag}
                         data={data}
-                        isPendingRevalidation={pendingRevalidations.has(tag)}
-                        isRevalidated={revalidatedTags.has(tag)}
+                        isInvalidated={invalidatedTags.has(tag)}
                         isSelected={selectedTag === tag}
                         onClick={() => setSelectedTag(tag)}
                       />
@@ -228,9 +224,9 @@ function Panel({
                         <div className="p-2 pl-6 flex gap-2 border-b border-border">
                           <RevalidateGroupButton
                             tags={tags.map(({ tag }) => tag)}
-                            onRevalidated={() => {
+                            onInvalidated={() => {
                               tags.forEach(({ tag }) => {
-                                handleTagRevalidated(tag);
+                                handleTagInvalidated(tag);
                               });
                             }}
                           />
@@ -250,10 +246,7 @@ function Panel({
                               <Tag
                                 tag={tag}
                                 data={data}
-                                isPendingRevalidation={pendingRevalidations.has(
-                                  tag,
-                                )}
-                                isRevalidated={revalidatedTags.has(tag)}
+                                isInvalidated={invalidatedTags.has(tag)}
                                 isSelected={selectedTag === tag}
                                 onClick={() => setSelectedTag(tag)}
                               />
@@ -271,119 +264,140 @@ function Panel({
           </div>
         </div>
         {selectedTag && (
-          <div className="flex-1 overflow-auto bg-muted rounded p-4">
-            {(() => {
-              const tagData = tags.find((t) => t.tag === selectedTag);
-              if (!tagData || tagData.data.length === 0) {
-                return (
-                  <div className="text-muted-foreground">
-                    No data for this tag
-                  </div>
-                );
-              }
-              const colonIndex = selectedTag.indexOf(":");
-              const groupName =
-                colonIndex !== -1
-                  ? stripPrefix(selectedTag.substring(0, colonIndex))
-                  : null;
-
-              return (
-                <div>
-                  <div className="flex items-center gap-2 mb-4 flex-wrap">
-                    <div className="flex-1">
-                      {groupName && (
-                        <div className="text-xs text-muted-foreground opacity-60 mb-1">
-                          {groupName}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-white m-0 text-2xl font-bold">
-                          {formatTagForDisplay(selectedTag)}
-                        </h3>
-                        {pendingRevalidations.has(selectedTag) && (
-                          <Badge type="pending-revalidation" />
-                        )}
-                        {revalidatedTags.has(selectedTag) &&
-                          !pendingRevalidations.has(selectedTag) && (
-                            <Badge type="revalidated" />
-                          )}
-                      </div>
-                    </div>
-                    <RevalidateButton
-                      tag={selectedTag}
-                      onRevalidated={() => handleTagRevalidated(selectedTag)}
-                    />
-                    <UpdateButton
-                      tag={selectedTag}
-                      onUpdated={() => handleTagUpdated(selectedTag)}
-                    />
-                  </div>
-                  <div className="mt-6 mb-4 pb-2 border-b border-border">
-                    <h4 className="text-white m-0 text-base font-semibold">
-                      Cache Entries ({tagData.data.length})
-                    </h4>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      These are the cached data entries attached to this tag
-                    </div>
-                  </div>
-                  {tagData.data.map((entry, idx) => {
-                    const badgeType = getEntryBadgeType(entry);
-                    return (
-                      <div
-                        key={`${entry.key}-${entry.timestamp}-${idx}`}
-                        className={`${idx < tagData.data.length - 1 ? "mb-6 pb-6 border-b border-border" : ""} bg-background p-4 rounded`}
-                      >
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          {badgeType && <Badge type={badgeType} />}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          <div className="flex gap-4 flex-wrap mb-2">
-                            <span>
-                              <strong>Cached at:</strong>{" "}
-                              {formatTimestamp(entry.timestamp)}
-                            </span>
-                            {entry.expire !== undefined && (
-                              <span>
-                                <strong>Expiry:</strong>{" "}
-                                {formatDuration(entry.expire)}
-                              </span>
-                            )}
-                            {entry.revalidate !== undefined && (
-                              <span>
-                                <strong>Revalidate:</strong>{" "}
-                                {formatDuration(entry.revalidate)}
-                              </span>
-                            )}
-                            {entry.stale !== undefined && (
-                              <span>
-                                <strong>Stale:</strong>{" "}
-                                {formatDuration(entry.stale)}
-                              </span>
-                            )}
-                          </div>
-                          {(entry.data !== undefined || entry.dataPreview) && (
-                            <div className="mt-2">
-                              <div className="text-xs text-muted-foreground mb-1">
-                                <strong>Preview:</strong>
-                              </div>
-                              <pre className="m-0 text-xs text-muted-foreground whitespace-pre-wrap break-words bg-muted p-2 rounded max-h-[300px] overflow-auto">
-                                {entry.data !== undefined
-                                  ? typeof entry.data === "string"
-                                    ? entry.data
-                                    : JSON.stringify(entry.data, null, 2)
-                                  : entry.dataPreview}
-                              </pre>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-          </div>
+          <TagPreview
+            selectedTag={selectedTag}
+            tags={tags}
+            invalidatedTags={invalidatedTags}
+            onTagInvalidated={handleTagInvalidated}
+            onTagUpdated={handleTagUpdated}
+          />
         )}
+      </div>
+    </div>
+  );
+}
+
+function TagPreview({
+  selectedTag,
+  tags,
+  invalidatedTags,
+  onTagInvalidated,
+  onTagUpdated,
+}: {
+  selectedTag: string;
+  tags: TagWithData[];
+  invalidatedTags: Map<string, number>;
+  onTagInvalidated: (tag: string) => void;
+  onTagUpdated: (tag: string) => Promise<void>;
+}) {
+  const tagData = tags.find((t) => t.tag === selectedTag);
+
+  if (!tagData || tagData.data.length === 0) {
+    return (
+      <div className="flex-1 overflow-auto bg-muted rounded p-4">
+        <div className="text-muted-foreground">No data for this tag</div>
+      </div>
+    );
+  }
+
+  const colonIndex = selectedTag.indexOf(":");
+  const groupName =
+    colonIndex !== -1
+      ? stripPrefix(selectedTag.substring(0, colonIndex))
+      : null;
+
+  return (
+    <div className="flex-1 overflow-auto bg-muted rounded p-4">
+      <div>
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <div className="flex-1">
+            {groupName && (
+              <div className="text-xs text-muted-foreground opacity-60 mb-1">
+                {groupName}
+              </div>
+            )}
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-white m-0 text-2xl font-bold">
+                {formatTagForDisplay(selectedTag)}
+              </h3>
+              {invalidatedTags.has(selectedTag) && <Badge type="invalidated" />}
+            </div>
+          </div>
+          <RevalidateButton
+            tag={selectedTag}
+            onInvalidated={() => onTagInvalidated(selectedTag)}
+          />
+          <UpdateButton
+            tag={selectedTag}
+            onUpdated={() => onTagUpdated(selectedTag)}
+          />
+        </div>
+        <div className="mt-6 mb-4 pb-2 border-b border-border">
+          <h4 className="text-white m-0 text-base font-semibold">
+            Cache Entries ({tagData.data.length})
+          </h4>
+          <div className="text-xs text-muted-foreground mt-1">
+            These are the cached data entries attached to this tag
+          </div>
+        </div>
+        {tagData.data.map((entry, idx) => {
+          const badgeType = getEntryBadgeType(entry);
+          return (
+            <div
+              key={`${entry.key}-${entry.timestamp}-${idx}`}
+              className={`${idx < tagData.data.length - 1 ? "mb-6 pb-6 border-b border-border" : ""} bg-background p-4 rounded`}
+            >
+              <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {badgeType && <Badge type={badgeType} />}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Cached at: {formatTimestamp(entry.timestamp)}
+                </div>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {(entry.data !== undefined || entry.dataPreview) && (
+                  <div className="mt-2">
+                    <pre className="m-0 text-xs text-muted-foreground whitespace-pre-wrap break-words bg-muted p-2 rounded max-h-[300px] overflow-auto">
+                      {entry.data !== undefined
+                        ? typeof entry.data === "string"
+                          ? entry.data
+                          : JSON.stringify(entry.data, null, 2)
+                        : entry.dataPreview}
+                    </pre>
+                  </div>
+                )}
+                {entry.tags.length > 0 && (
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Tags: {entry.tags.join(", ")}
+                  </div>
+                )}
+                {(entry.expire !== undefined ||
+                  entry.revalidate !== undefined ||
+                  entry.stale !== undefined) && (
+                  <div className="flex gap-4 flex-wrap mt-2 text-xs text-muted-foreground">
+                    {entry.expire !== undefined && (
+                      <span>
+                        <strong>Expiry:</strong> {formatDuration(entry.expire)}
+                      </span>
+                    )}
+                    {entry.revalidate !== undefined && (
+                      <span>
+                        <strong>Revalidate:</strong>{" "}
+                        {formatDuration(entry.revalidate)}
+                      </span>
+                    )}
+                    {entry.stale !== undefined && (
+                      <span>
+                        <strong>Stale:</strong> {formatDuration(entry.stale)}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -392,18 +406,18 @@ function Panel({
 function Tag({
   tag,
   data,
-  isPendingRevalidation,
-  isRevalidated,
+  isInvalidated,
   isSelected,
   onClick,
 }: {
   tag: string;
   data: TagData[];
-  isPendingRevalidation: boolean;
-  isRevalidated: boolean;
+  isInvalidated: boolean;
   isSelected: boolean;
   onClick: () => void;
 }) {
+  const entryCounts = getEntryCounts(data);
+
   return (
     <button
       type="button"
@@ -413,10 +427,18 @@ function Tag({
       <div className="flex items-center gap-2 flex-wrap">
         <code className="bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded flex-1 flex items-center gap-2 justify-between">
           {formatTagForDisplay(tag)}
-          {isPendingRevalidation && <Badge type="pending-revalidation" />}
-          {isRevalidated && !isPendingRevalidation && (
-            <Badge type="revalidated" />
-          )}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {entryCounts.fresh > 0 && (
+              <BadgeWithCount type="fresh" count={entryCounts.fresh} />
+            )}
+            {entryCounts.stale > 0 && (
+              <BadgeWithCount type="stale" count={entryCounts.stale} />
+            )}
+            {entryCounts.expired > 0 && (
+              <BadgeWithCount type="expired" count={entryCounts.expired} />
+            )}
+            {isInvalidated && <Badge type="invalidated" />}
+          </div>
         </code>
       </div>
     </button>
@@ -499,22 +521,20 @@ function Button({
 function Badge({
   type,
 }: {
-  type: "fresh" | "stale" | "revalidated" | "expired" | "pending-revalidation";
+  type: "fresh" | "stale" | "invalidated" | "expired";
 }) {
   const labelClasses = {
     fresh: "bg-[#004400] text-[#88ff88]",
     stale: "bg-[#664400] text-[#ffaa00]",
-    revalidated: "bg-[#004466] text-[#88ccff]",
+    invalidated: "bg-[#004466] text-[#88ccff]",
     expired: "bg-[#440000] text-[#ff8888]",
-    "pending-revalidation": "bg-[#664400] text-[#ffcc00]",
   };
 
   const labels = {
     fresh: "fresh",
     stale: "stale",
-    revalidated: "revalidated",
+    invalidated: "invalidated",
     expired: "expired",
-    "pending-revalidation": "pending",
   };
 
   return (
@@ -526,12 +546,41 @@ function Badge({
   );
 }
 
+function BadgeWithCount({
+  type,
+  count,
+}: {
+  type: "fresh" | "stale" | "expired";
+  count: number;
+}) {
+  const labelClasses = {
+    fresh: "bg-[#004400] text-[#88ff88]",
+    stale: "bg-[#664400] text-[#ffaa00]",
+    expired: "bg-[#440000] text-[#ff8888]",
+  };
+
+  const labels = {
+    fresh: "fresh",
+    stale: "stale",
+    expired: "expired",
+  };
+
+  return (
+    <span
+      className={`text-[0.7rem] px-1.5 py-0.5 rounded ${labelClasses[type]}`}
+    >
+      {labels[type]}
+      {count > 1 ? ` (${count})` : ""}
+    </span>
+  );
+}
+
 function RevalidateButton({
   tag,
-  onRevalidated,
+  onInvalidated,
 }: {
   tag: string;
-  onRevalidated: () => void;
+  onInvalidated: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
 
@@ -540,7 +589,7 @@ function RevalidateButton({
       action={() => {
         startTransition(async () => {
           await revalidateTagAction(tag);
-          onRevalidated();
+          onInvalidated();
         });
       }}
     >
@@ -599,7 +648,7 @@ function RefreshButton() {
   );
 }
 
-function RevalidateAllButton({ onRevalidated }: { onRevalidated: () => void }) {
+function RevalidateAllButton({ onInvalidated }: { onInvalidated: () => void }) {
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -607,7 +656,7 @@ function RevalidateAllButton({ onRevalidated }: { onRevalidated: () => void }) {
       action={() => {
         startTransition(async () => {
           await revalidateTagAction(GLOBAL_CACHE_TAG);
-          onRevalidated();
+          onInvalidated();
         });
       }}
     >
@@ -625,10 +674,10 @@ function RevalidateAllButton({ onRevalidated }: { onRevalidated: () => void }) {
 
 function RevalidateGroupButton({
   tags,
-  onRevalidated,
+  onInvalidated,
 }: {
   tags: string[];
-  onRevalidated: () => void;
+  onInvalidated: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
 
@@ -637,7 +686,7 @@ function RevalidateGroupButton({
       action={() => {
         startTransition(async () => {
           await Promise.all(tags.map((tag) => revalidateTagAction(tag)));
-          onRevalidated();
+          onInvalidated();
         });
       }}
     >
@@ -704,6 +753,27 @@ function getEntryBadgeType(
   }
 
   return null;
+}
+
+function getEntryCounts(data: TagData[]): {
+  fresh: number;
+  stale: number;
+  expired: number;
+} {
+  const counts = { fresh: 0, stale: 0, expired: 0 };
+
+  data.forEach((entry) => {
+    const badgeType = getEntryBadgeType(entry);
+    if (badgeType === "fresh") {
+      counts.fresh++;
+    } else if (badgeType === "stale") {
+      counts.stale++;
+    } else if (badgeType === "expired") {
+      counts.expired++;
+    }
+  });
+
+  return counts;
 }
 
 function CacheTagsPanelImpl({ initialTags }: { initialTags: TagWithData[] }) {
