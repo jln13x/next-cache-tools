@@ -1,0 +1,128 @@
+---
+title: Cache Tag
+description: Create and manage cache tags with automatic lifecycle management
+---
+
+`createCacheTag` is the core function for creating cache tags that help you manage Next.js cache invalidation and updates.
+
+## Basic Usage
+
+```typescript
+import { createCacheTag } from "next-cache-tools";
+
+const userTag = createCacheTag({
+  cacheKey: ({ id }: { id: string }) => id,
+});
+
+async function getUser(id: string) {
+  "use cache";
+  
+  userTag.tag({ id });
+  
+  return { id, name: `User ${id}` };
+}
+```
+
+## Automatic Lifecycle Management
+
+When you call `.tag()`, it automatically calls `.life()` for you. This means you don't need to call `.life()` separately unless you want to override the default behavior:
+
+```typescript
+// This automatically calls .life() with the default profile
+userTag.tag({ id: "user-123" });
+
+// Equivalent to:
+userTag.tag({ id: "user-123" });
+userTag.life(); // Called automatically
+```
+
+## Setting Default Cache Life
+
+You can set a default cache life profile when creating the tag:
+
+```typescript
+const userTag = createCacheTag({
+  cacheKey: ({ id }: { id: string }) => id,
+  cacheLife: "max", // Default profile for this tag
+});
+
+async function getUser(id: string) {
+  "use cache";
+  
+  // Automatically uses "max" profile
+  userTag.tag({ id });
+  
+  return { id, name: `User ${id}` };
+}
+```
+
+## Overriding Cache Life
+
+You can override the default cache life by calling `.life()` explicitly after `.tag()`:
+
+```typescript
+const userTag = createCacheTag({
+  cacheKey: ({ id }: { id: string }) => id,
+  cacheLife: "default", // Default profile
+});
+
+async function getUser(id: string) {
+  "use cache";
+  
+  userTag.tag({ id });
+  userTag.life({ profile: "max" }); // Override with "max"
+  
+  return { id, name: `User ${id}` };
+}
+```
+
+## Cache Life Profiles
+
+Available built-in profiles:
+
+- `"default"` - Standard cache behavior
+- `"seconds"` - Cache for seconds
+- `"minutes"` - Cache for minutes
+- `"hours"` - Cache for hours
+- `"days"` - Cache for days
+- `"weeks"` - Cache for weeks
+- `"max"` - Maximum cache duration
+
+You can also use custom profiles:
+
+```typescript
+userTag.life({
+  profile: {
+    stale: 5,      // Stale after 5 seconds
+    revalidate: 60, // Revalidate after 60 seconds
+    expire: 300,    // Expire after 300 seconds
+  },
+});
+```
+
+## Methods
+
+### `.tag(args?)`
+
+Tags the cache with the provided arguments. Automatically calls `.life()` with the default profile.
+
+```typescript
+userTag.tag({ id: "user-123" });
+```
+
+### `.life(options?)`
+
+Sets the cache lifecycle profile. If called without options, uses the default profile set when creating the tag.
+
+```typescript
+userTag.life({ profile: "max" });
+```
+
+### `.revalidate(options?)`
+
+Invalidates the cache tag. See [Revalidation & Updates](/docs/revalidation) for details.
+
+### `.update(options?)`
+
+Updates the cache tag. See [Revalidation & Updates](/docs/revalidation) for details.
+

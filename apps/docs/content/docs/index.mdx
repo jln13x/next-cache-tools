@@ -7,46 +7,9 @@ description: Installation and setup guide for next-cache-tools
 
 Install the package using your preferred package manager:
 
-```bash
-pnpm add next-cache-tools
-```
 
-Or with npm:
-
-```bash
-npm install next-cache-tools
-```
-
-Or with yarn:
-
-```bash
-yarn add next-cache-tools
-```
-
-## Requirements
-
-Before installing, ensure your project meets these requirements:
-
-- **Next.js** >= 16
-- **React** >= 19
-- **React DOM** >= 19
-
-## Configuration
-
-Configure the cache handler in your `next.config.ts`:
-
-```typescript
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  ...
-  cacheHandlers: {
-    default: require.resolve("next-cache-tools/devtools/cache-handler"),
-  },
-  ...
-};
-
-export default nextConfig;
+```npm
+npm i next-cache-tools
 ```
 
 ## Quick Start
@@ -64,34 +27,48 @@ async function getUser(id: string) {
   "use cache";
   
   userTag.tag({ id });
+  
+  return { id, name: `User ${id}` };
+}
+```
+
+
+### Using Cache Tags
+
+```typescript
+import { userTag } from "@/app/cache";
+
+async function getUserById(id: string) {
+  "use cache";
+  
+  userTag.tag({ id });
   userTag.life({ profile: "max" });
   
   return { id, name: `User ${id}` };
 }
 ```
 
-### Cache Tag Groups
+Learn more about [Cache Tags](/docs/cache-tag).
+
+
+## (Optional) Group your Tags
+
+Cache groups allow you to organize related cache tags hierarchically and perform bulk operations on deeply nested structures. You can call `.revalidate()` and `.update()` at any level of the hierarchy to manage related caches efficiently.
 
 ```typescript
 import { createCacheTag, createCacheTagGroup } from "next-cache-tools";
 
-const byIdCacheTag = createCacheTag({
-  cacheKey: ({ id }: { id: string }) => id,
-});
-
-const byEmailCacheTag = createCacheTag({
-  cacheKey: ({ email }: { email: string }) => email,
-});
-
 export const cacheGroup = createCacheTagGroup("users", {
   user: {
-    byId: byIdCacheTag,
-    byEmail: byEmailCacheTag,
+    byId: createCacheTag({
+      cacheKey: ({ id }: { id: string }) => id,
+    }),
+    byEmail: createCacheTag({
+      cacheKey: ({ email }: { email: string }) => email,
+    }),
   },
 });
 ```
-
-### Using Cache Tags
 
 ```typescript
 import { cacheGroup } from "@/app/cache";
@@ -100,9 +77,10 @@ async function getUserById(id: string) {
   "use cache";
   
   cacheGroup.user.byId.tag({ id });
-  cacheGroup.user.byId.life({ profile: "max" });
   
   return { id, name: `User ${id}` };
 }
 ```
+
+Learn more about [Cache Groups](/docs/cache-groups).
 

@@ -1,0 +1,10 @@
+{
+  "pages": [
+    "index",
+    "cache-tag",
+    "cache-groups",
+    "revalidation",
+    "devtools"
+  ]
+}
+

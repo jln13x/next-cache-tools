@@ -1,0 +1,88 @@
+---
+title: Cache Groups
+description: Organize cache tags hierarchically and perform bulk operations on deeply nested structures
+---
+
+Cache groups allow you to organize related cache tags hierarchically and perform bulk operations on deeply nested structures. This is especially powerful when you need to invalidate or update multiple related caches at once.
+
+## Deeply Nested Structures
+
+You can create deeply nested cache groups to organize your cache tags:
+
+```typescript
+import { createCacheTag, createCacheTagGroup } from "next-cache-tools";
+
+export const cacheGroup = createCacheTagGroup("app", {
+  users: {
+    byId: createCacheTag({
+      cacheKey: ({ id }: { id: string }) => id,
+    }),
+    byEmail: createCacheTag({
+      cacheKey: ({ email }: { email: string }) => email,
+    }),
+  },
+  posts: {
+    byId: createCacheTag({
+      cacheKey: ({ id }: { id: string }) => id,
+    }),
+    byAuthor: createCacheTag({
+      cacheKey: ({ authorId }: { authorId: string }) => authorId,
+    }),
+    comments: {
+      byPostId: createCacheTag({
+        cacheKey: ({ postId }: { postId: string }) => postId,
+      }),
+      byId: createCacheTag({
+        cacheKey: ({ id }: { id: string }) => id,
+      }),
+    },
+  },
+});
+```
+
+## Revalidating Groups
+
+You can call `.revalidate()` on any level of the cache group hierarchy to invalidate all tags within that group:
+
+```typescript
+// Revalidate the entire cache group (all users, posts, and comments)
+cacheGroup.revalidate();
+
+// Revalidate all user-related caches
+cacheGroup.users.revalidate();
+
+// Revalidate all post-related caches (including comments)
+cacheGroup.posts.revalidate();
+
+// Revalidate only comment-related caches
+cacheGroup.posts.comments.revalidate();
+```
+
+## Updating Groups
+
+The `.update()` method works similarly but triggers cache updates instead of invalidation:
+
+```typescript
+// Update the entire cache group (all users, posts, and comments)
+cacheGroup.update();
+
+// Update all user-related caches
+cacheGroup.users.update();
+
+// Update all post-related caches (including comments)
+cacheGroup.posts.update();
+
+// Update only comment-related caches
+cacheGroup.posts.comments.update();
+```
+
+## Selective Operations
+
+For selective revalidation or updates on individual tags (using `filter` or `predicate`), see the [Revalidation & Updates](/docs/revalidation) guide.
+
+## Use Cases
+
+- **Bulk invalidation**: When a user updates their profile, invalidate all related caches
+- **Hierarchical updates**: When a post is deleted, invalidate the post and all its comments
+- **Organized cache management**: Keep your cache invalidation logic organized and maintainable
+

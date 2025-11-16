@@ -1,0 +1,120 @@
+---
+title: Revalidation & Updates
+description: Selective cache invalidation and updates using filters and predicates
+---
+
+Both `.revalidate()` and `.update()` methods support selective operations using `filter` and `predicate` options. These work on individual cache tags, allowing you to target specific cached entries.
+
+## Filter Option
+
+Use `filter` to target a specific cache entry by providing the same arguments used when tagging:
+
+```typescript
+import { createCacheTag } from "next-cache-tools";
+
+const userTag = createCacheTag({
+  cacheKey: ({ id }: { id: string }) => id,
+});
+
+// Tag a user
+userTag.tag({ id: "user-123" });
+
+// Later, revalidate only that specific user
+userTag.revalidate({
+  filter: { id: "user-123" },
+});
+
+// Or update only that specific user
+userTag.update({
+  filter: { id: "user-123" },
+});
+```
+
+## Predicate Option
+
+Use `predicate` to target multiple cache entries that match a condition:
+
+```typescript
+import { createCacheTag } from "next-cache-tools";
+
+const userTag = createCacheTag({
+  cacheKey: ({ id }: { id: string }) => id,
+});
+
+// Tag multiple users
+userTag.tag({ id: "user-1" });
+userTag.tag({ id: "user-2" });
+userTag.tag({ id: "admin-1" });
+
+// Revalidate all users whose ID starts with "user-"
+userTag.revalidate({
+  predicate: (args) => args.id.startsWith("user-"),
+});
+
+// Update all users whose ID starts with "user-"
+userTag.update({
+  predicate: (args) => args.id.startsWith("user-"),
+});
+```
+
+## Complex Predicates
+
+You can use complex conditions in predicates:
+
+```typescript
+// Revalidate users matching multiple conditions
+userTag.revalidate({
+  predicate: (args) => 
+    args.id.startsWith("user-") && 
+    args.id.includes("1"),
+});
+
+// Update users based on any custom logic
+userTag.update({
+  predicate: (args) => {
+    const num = parseInt(args.id.split("-")[1]);
+    return num > 10 && num < 20;
+  },
+});
+```
+
+## With Cache Groups
+
+These options also work when accessing tags through cache groups:
+
+```typescript
+import { createCacheTag, createCacheTagGroup } from "next-cache-tools";
+
+const cacheGroup = createCacheTagGroup("app", {
+  users: {
+    byId: createCacheTag({
+      cacheKey: ({ id }: { id: string }) => id,
+    }),
+    byEmail: createCacheTag({
+      cacheKey: ({ email }: { email: string }) => email,
+    }),
+  },
+});
+
+// Revalidate a specific user by ID
+cacheGroup.users.byId.revalidate({
+  filter: { id: "user-123" },
+});
+
+// Revalidate all admin users
+cacheGroup.users.byId.revalidate({
+  predicate: (args) => args.id.startsWith("admin-"),
+});
+
+// Update a user by email
+cacheGroup.users.byEmail.update({
+  filter: { email: "user@example.com" },
+});
+```
+
+## When to Use Each
+
+- **No options**: Revalidate or update all entries for that tag
+- **`filter`**: Target a single specific entry
+- **`predicate`**: Target multiple entries matching a condition
+

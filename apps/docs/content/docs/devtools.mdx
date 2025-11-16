@@ -7,6 +7,25 @@ The package includes a development-only devtools panel for inspecting and managi
 
 ## Setup
 
+### 1. Configure the Cache Handler
+
+Add the devtools cache handler to your `next.config.ts`:
+
+```typescript
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  cacheHandlers: {
+    default: require.resolve("next-cache-tools/devtools/cache-handler"),
+  },
+  cacheComponents: true,
+};
+
+export default nextConfig;
+```
+
+### 2. Add the Devtools Component
+
 Add the devtools component to your root layout:
 
 ```typescript
