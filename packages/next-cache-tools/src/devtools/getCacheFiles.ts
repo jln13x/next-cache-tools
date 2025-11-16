@@ -37,7 +37,10 @@ async function getInMemoryTags(): Promise<Map<string, TagData[]>> {
   const cacheEntries = handler.getCacheEntries();
 
   if (cacheEntries.size > 0) {
-    for (const [cacheKey, entry] of cacheEntries.entries()) {
+    for (const [cacheKey, node] of cacheEntries.entries()) {
+      const privateEntry = node.data;
+      const entry = privateEntry.entry;
+
       const tagData: TagData = {
         key: cacheKey,
         tags: entry.tags || [],
