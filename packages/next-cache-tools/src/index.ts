@@ -108,6 +108,7 @@ class _CacheTag<T = any> {
 
     tagsToUse.push(this.prefixTag(finalTag));
     cacheTag(...tagsToUse);
+    this.life();
   }
 
   life(_options?: LifeOptions<T>): void {
