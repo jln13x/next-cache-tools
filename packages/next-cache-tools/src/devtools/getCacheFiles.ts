@@ -14,20 +14,6 @@ export interface TagData {
 async function getInMemoryTags(): Promise<Map<string, TagData[]>> {
   const tagMap = new Map<string, TagData[]>();
 
-  // Get tags from tags manifest
-  try {
-    const tagsManifestModule = await import(
-      "next/dist/server/lib/incremental-cache/tags-manifest.external"
-    );
-    for (const [tag] of tagsManifestModule.tagsManifest.entries()) {
-      if (!tagMap.has(tag)) {
-        tagMap.set(tag, []);
-      }
-    }
-  } catch {
-    // Tags manifest not available
-  }
-
   // Get entries from Next.js cache handler (from global symbol)
   const handlersMapSymbol = Symbol.for("@next/cache-handlers-map");
   const handlersMap = (globalThis as any)[handlersMapSymbol] as
@@ -40,22 +26,11 @@ async function getInMemoryTags(): Promise<Map<string, TagData[]>> {
     );
   }
 
-  const handler = handlersMap.get("default") || handlersMap.get("remote");
-  if (!handler) {
-    throw new Error(
-      "next-cache-tools: No cache handler found in Next.js handlers map.",
-    );
-  }
+  const handler = handlersMap.get("default");
 
   if (handler._tag !== _tag) {
     throw new Error(
       "next-cache-tools: The cache handler registered with Next.js is not the next-cache-tools handler. Please ensure you have properly configured next-cache-tools.",
-    );
-  }
-
-  if (typeof handler.getCacheEntries !== "function") {
-    throw new Error(
-      "next-cache-tools: Cache handler does not have getCacheEntries method.",
     );
   }
 
