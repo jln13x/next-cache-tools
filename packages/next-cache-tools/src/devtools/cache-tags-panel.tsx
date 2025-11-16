@@ -1,7 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import React, { type ComponentType, useState, useTransition } from "react";
+import React, {
+  type ComponentType,
+  useEffect,
+  useState,
+  useTransition,
+} from "react";
 import { createPortal } from "react-dom";
 import { GLOBAL_CACHE_TAG, stripPrefix } from "../shared";
 import {
@@ -52,6 +57,15 @@ function Panel({
   const [tagsWithData, setTagsWithData] = useState<Set<string>>(
     new Set(initialTags.filter((t) => t.data.length > 0).map((t) => t.tag)),
   );
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const filteredTags = tags.filter(
     ({ tag, data }) =>
@@ -198,6 +212,7 @@ function Panel({
                         isInvalidated={invalidatedTags.has(tag)}
                         isSelected={selectedTag === tag}
                         onClick={() => setSelectedTag(tag)}
+                        currentTime={currentTime}
                       />
                     </li>
                   ))}
@@ -249,6 +264,7 @@ function Panel({
                                 isInvalidated={invalidatedTags.has(tag)}
                                 isSelected={selectedTag === tag}
                                 onClick={() => setSelectedTag(tag)}
+                                currentTime={currentTime}
                               />
                             </li>
                           ))}
@@ -270,6 +286,7 @@ function Panel({
             invalidatedTags={invalidatedTags}
             onTagInvalidated={handleTagInvalidated}
             onTagUpdated={handleTagUpdated}
+            currentTime={currentTime}
           />
         )}
       </div>
@@ -283,12 +300,14 @@ function TagPreview({
   invalidatedTags,
   onTagInvalidated,
   onTagUpdated,
+  currentTime,
 }: {
   selectedTag: string;
   tags: TagWithData[];
   invalidatedTags: Map<string, number>;
   onTagInvalidated: (tag: string) => void;
   onTagUpdated: (tag: string) => Promise<void>;
+  currentTime: number;
 }) {
   const tagData = tags.find((t) => t.tag === selectedTag);
 
@@ -341,7 +360,7 @@ function TagPreview({
           </div>
         </div>
         {tagData.data.map((entry, idx) => {
-          const badgeType = getEntryBadgeType(entry);
+          const badgeType = getEntryBadgeType(entry, currentTime);
           return (
             <div
               key={`${entry.key}-${entry.timestamp}-${idx}`}
@@ -409,14 +428,16 @@ function Tag({
   isInvalidated,
   isSelected,
   onClick,
+  currentTime,
 }: {
   tag: string;
   data: TagData[];
   isInvalidated: boolean;
   isSelected: boolean;
   onClick: () => void;
+  currentTime: number;
 }) {
-  const entryCounts = getEntryCounts(data);
+  const entryCounts = getEntryCounts(data, currentTime);
 
   return (
     <button
@@ -734,9 +755,8 @@ function UpdateGroupButton({
 
 function getEntryBadgeType(
   entry: TagData,
+  now: number = Date.now(),
 ): "fresh" | "stale" | "expired" | null {
-  const now = Date.now();
-
   if (entry.expire !== undefined) {
     const expireTime = entry.timestamp + entry.expire * 1000;
     if (expireTime < now) {
@@ -755,7 +775,10 @@ function getEntryBadgeType(
   return null;
 }
 
-function getEntryCounts(data: TagData[]): {
+function getEntryCounts(
+  data: TagData[],
+  now: number = Date.now(),
+): {
   fresh: number;
   stale: number;
   expired: number;
@@ -763,7 +786,7 @@ function getEntryCounts(data: TagData[]): {
   const counts = { fresh: 0, stale: 0, expired: 0 };
 
   data.forEach((entry) => {
-    const badgeType = getEntryBadgeType(entry);
+    const badgeType = getEntryBadgeType(entry, now);
     if (badgeType === "fresh") {
       counts.fresh++;
     } else if (badgeType === "stale") {
