@@ -1,7 +1,9 @@
 import { Suspense } from "react";
-import { OpenDevtools } from "./CacheTagsPanel";
+import { CacheTagsPanel } from "./cache-tags-panel";
 import type { TagData } from "./getCacheFiles";
 import { getAllCacheTags } from "./getCacheFiles";
+
+import "./index.css";
 
 interface TagWithData {
   tag: string;
@@ -26,5 +28,5 @@ async function Devtools() {
     .map(([tag, data]: [string, TagData[]]) => ({ tag, data }))
     .sort((a, b) => a.tag.localeCompare(b.tag));
 
-  return <OpenDevtools initialTags={tagsArray} />;
+  return <CacheTagsPanel initialTags={tagsArray} />;
 }

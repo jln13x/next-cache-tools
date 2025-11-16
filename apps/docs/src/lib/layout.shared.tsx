@@ -6,5 +6,11 @@ export function baseOptions(): BaseLayoutProps {
     nav: {
       title: "next-cache-tools",
     },
+    links: [
+      {
+        text: "Contact",
+        url: "https://x.com/jlndev",
+      },
+    ],
   };
 }

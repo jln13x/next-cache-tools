@@ -11,6 +11,7 @@
     },
     "scripts": {
         "build": "tsdown",
+        "dev:tailwind": "npx @tailwindcss/cli -i ./src/devtools/index.css -o ./dist/devtools/index.css --watch",
         "dev": "tsdown --watch",
         "lint": "tsc --noEmit",
         "test": "vitest",
@@ -23,12 +24,12 @@
         "react-dom": ">=19"
     },
     "devDependencies": {
-        "@testing-library/jest-dom": "^6.6.3",
-        "@testing-library/react": "^16.1.0",
         "@types/node": "^20.0.0",
-        "@types/react": "^19.1.16",
-        "@types/react-dom": "^19.1.9",
+        "@types/react": "^19",
+        "@types/react-dom": "^19",
         "@vitest/ui": "^2.1.8",
+        "tailwindcss": "^4.1.17",
+        "@tailwindcss/cli": "^4.1.17",
         "tsdown": "^0.15.4",
         "typescript": "catalog:",
         "vitest": "^2.1.8"

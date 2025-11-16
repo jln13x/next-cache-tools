@@ -17,7 +17,6 @@ export async function refreshAction() {
 
 export async function fetchCacheTagsAction() {
   const tagMap = await getAllCacheTags();
-  console.log("[fetchCacheTagsAction] tagMap", tagMap);
 
   const tagsArray = Array.from(tagMap.entries())
     .map(([tag, data]) => ({ tag, data }))
