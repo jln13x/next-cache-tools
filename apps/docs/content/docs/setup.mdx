@@ -1,0 +1,90 @@
+---
+title: Setup
+description: Installation and setup guide for next-cache-tools
+---
+
+## Installation
+
+Install the package using your preferred package manager:
+
+```bash
+pnpm add next-cache-tools
+```
+
+Or with npm:
+
+```bash
+npm install next-cache-tools
+```
+
+Or with yarn:
+
+```bash
+yarn add next-cache-tools
+```
+
+## Requirements
+
+Before installing, ensure your project meets these requirements:
+
+- **Next.js** >= 16
+- **React** >= 19
+- **React DOM** >= 19
+
+## Quick Start
+
+### Basic Cache Tag
+
+```typescript
+import { createCacheTag } from "next-cache-tools";
+
+const userTag = createCacheTag({
+  cacheKey: ({ id }: { id: string }) => id,
+});
+
+async function getUser(id: string) {
+  "use cache";
+  
+  userTag.tag({ id });
+  userTag.life({ profile: "max" });
+  
+  return { id, name: `User ${id}` };
+}
+```
+
+### Cache Tag Groups
+
+```typescript
+import { createCacheTag, createCacheTagGroup } from "next-cache-tools";
+
+const byIdCacheTag = createCacheTag({
+  cacheKey: ({ id }: { id: string }) => id,
+});
+
+const byEmailCacheTag = createCacheTag({
+  cacheKey: ({ email }: { email: string }) => email,
+});
+
+export const cacheGroup = createCacheTagGroup("users", {
+  user: {
+    byId: byIdCacheTag,
+    byEmail: byEmailCacheTag,
+  },
+});
+```
+
+### Using Cache Tags
+
+```typescript
+import { cacheGroup } from "@/app/cache";
+
+async function getUserById(id: string) {
+  "use cache";
+  
+  cacheGroup.user.byId.tag({ id });
+  cacheGroup.user.byId.life({ profile: "max" });
+  
+  return { id, name: `User ${id}` };
+}
+```
+

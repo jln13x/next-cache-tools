@@ -1,0 +1,69 @@
+{
+    "name": "next-cache-tools",
+    "description": "",
+    "version": "0.0.1",
+    "license": "MIT",
+    "author": "jln13x",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/jln13x/next-cache-tools.git",
+        "directory": "packages/next-cache-tools"
+    },
+    "scripts": {
+        "build": "tsdown",
+        "dev": "tsdown --watch",
+        "lint": "tsc --noEmit",
+        "test": "vitest",
+        "test:run": "vitest run",
+        "test:ui": "vitest --ui"
+    },
+    "peerDependencies": {
+        "next": ">=16",
+        "react": ">=19",
+        "react-dom": ">=19"
+    },
+    "devDependencies": {
+        "@testing-library/jest-dom": "^6.6.3",
+        "@testing-library/react": "^16.1.0",
+        "@types/node": "^20.0.0",
+        "@types/react": "^19.1.16",
+        "@types/react-dom": "^19.1.9",
+        "@vitest/ui": "^2.1.8",
+        "tsdown": "^0.15.4",
+        "typescript": "catalog:",
+        "vitest": "^2.1.8"
+    },
+    "exports": {
+        "./package.json": "./package.json",
+        ".": {
+            "import": {
+                "types": "./dist/index.d.mts",
+                "default": "./dist/index.mjs"
+            },
+            "require": {
+                "types": "./dist/index.d.cts",
+                "default": "./dist/index.cjs"
+            }
+        },
+        "./devtools": {
+            "import": {
+                "types": "./dist/devtools/index.d.mts",
+                "default": "./dist/devtools/index.mjs"
+            },
+            "require": {
+                "types": "./dist/devtools/index.d.cts",
+                "default": "./dist/devtools/index.cjs"
+            }
+        },
+        "./devtools/cache-handler": {
+            "import": {
+                "types": "./dist/devtools/cache-handler.d.mts",
+                "default": "./dist/devtools/cache-handler.mjs"
+            },
+            "require": {
+                "types": "./dist/devtools/cache-handler.d.cts",
+                "default": "./dist/devtools/cache-handler.cjs"
+            }
+        }
+    }
+}

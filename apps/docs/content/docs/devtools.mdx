@@ -1,0 +1,48 @@
+---
+title: Devtools
+description: Development tools for inspecting and managing cache tags
+---
+
+The package includes a development-only devtools panel for inspecting and managing cache tags.
+
+## Setup
+
+Add the devtools component to your root layout:
+
+```typescript
+import { NextCacheToolsDevtools } from "next-cache-tools/devtools";
+import { Suspense } from "react";
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html>
+      <body>
+        {children}
+        <Suspense>
+          <NextCacheToolsDevtools />
+        </Suspense>
+      </body>
+    </html>
+  );
+}
+```
+
+## Features
+
+The devtools panel will automatically appear in development mode, providing:
+
+- **All cache tags** with their associated data
+- **Grouped tags** organized by namespace
+- **Search functionality** to quickly find specific tags
+- **Individual tag revalidation** for targeted cache invalidation
+- **Group revalidation** to invalidate entire tag groups
+- **Real-time polling** (updates every 2 seconds)
+
+## Development Only
+
+The devtools panel is automatically disabled in production builds. It only appears when `NODE_ENV` is set to `"development"`, ensuring no performance impact on your production application.
+
