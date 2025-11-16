@@ -204,11 +204,7 @@ function createDefaultCacheHandler(maxSize: number): CacheHandler {
       }
     },
     getCacheEntries() {
-      const entries = new Map<string, CacheEntry>();
-      for (const [key, privateEntry] of memoryCache) {
-        entries.set(key, privateEntry.entry);
-      }
-      return entries;
+      return memoryCache.cache;
     },
   } as CacheHandler;
 
