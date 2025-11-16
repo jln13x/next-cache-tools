@@ -23,20 +23,10 @@ async function getUser(id: string) {
 }
 ```
 
-## Automatic Lifecycle Management
+## Cache Life
 
-When you call `.tag()`, it automatically calls `.life()` for you. This means you don't need to call `.life()` separately unless you want to override the default behavior:
+### Setting a Default Profile
 
-```typescript
-// This automatically calls .life() with the default profile
-userTag.tag({ id: "user-123" });
-
-// Equivalent to:
-userTag.tag({ id: "user-123" });
-userTag.life(); // Called automatically
-```
-
-## Setting Default Cache Life
 
 You can set a default cache life profile when creating the tag:
 
@@ -45,7 +35,12 @@ const userTag = createCacheTag({
   cacheKey: ({ id }: { id: string }) => id,
   cacheLife: "max", // Default profile for this tag
 });
+```
 
+When you call `.tag()`, it automatically calls `.life()` for you. This means you don't need to call `.life()` separately unless you want to override the default behavior:
+
+
+```typescript
 async function getUser(id: string) {
   "use cache";
   
@@ -56,7 +51,7 @@ async function getUser(id: string) {
 }
 ```
 
-## Overriding Cache Life
+### Overriding Cache Life
 
 You can override the default cache life by calling `.life()` explicitly after `.tag()`:
 
@@ -76,17 +71,11 @@ async function getUser(id: string) {
 }
 ```
 
-## Cache Life Profiles
+### Cache Life Profiles
 
-Available built-in profiles:
+Cache tags integrate with Next.js's `cacheLife` function to manage cache timing. You can set a default profile when creating a tag using the `cacheLife` option, or override it per-usage with `.life()`.
 
-- `"default"` - Standard cache behavior
-- `"seconds"` - Cache for seconds
-- `"minutes"` - Cache for minutes
-- `"hours"` - Cache for hours
-- `"days"` - Cache for days
-- `"weeks"` - Cache for weeks
-- `"max"` - Maximum cache duration
+Learn more about cache profiles and timing in the [Next.js cacheLife documentation](https://nextjs.org/docs/app/api-reference/functions/cacheLife).
 
 You can also use custom profiles:
 
