@@ -11,7 +11,6 @@ import { createPortal } from "react-dom";
 import { GLOBAL_CACHE_TAG, hasPrefix, stripPrefix } from "../shared";
 import {
   fetchCacheTagsAction,
-  refreshAction,
   revalidateTagAction,
   updateTagAction,
 } from "./actions";
@@ -261,7 +260,12 @@ function Panel({
         </div>
         <div className="flex gap-2 items-center">
           <RevalidateAllButton onInvalidated={handleInvalidateAll} />
-          <RefreshButton />
+          <UpdateAllButton
+            tags={filteredTags.map(({ tag }) => tag)}
+            onUpdated={() =>
+              handleGroupUpdated(filteredTags.map(({ tag }) => tag))
+            }
+          />
           <Button
             variant="secondary"
             type="button"
@@ -711,13 +715,13 @@ function Button({
   children: React.ReactNode;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const variantClasses = {
-    default: "bg-[#2a2a2a] text-white border border-[#444]",
+    default: "bg-primary text-primary-foreground border border-primary",
     secondary: "bg-secondary text-secondary-foreground border border-border",
   };
 
   return (
     <button
-      className={`px-2.5 py-1.5 rounded cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${variantClasses[variant]} ${className}`}
+      className={`px-2.5 py-1.5 font-bold text-sm rounded cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${variantClasses[variant]} ${className}`}
       {...props}
     >
       {children}
@@ -832,14 +836,21 @@ function UpdateButton({
   );
 }
 
-function RefreshButton() {
+function UpdateAllButton({
+  tags,
+  onUpdated,
+}: {
+  tags: string[];
+  onUpdated: () => Promise<void>;
+}) {
   const [isPending, startTransition] = useTransition();
 
   return (
     <form
       action={() => {
         startTransition(async () => {
-          await refreshAction();
+          await Promise.all(tags.map((tag) => updateTagAction(tag)));
+          await onUpdated();
         });
       }}
     >
@@ -849,7 +860,7 @@ function RefreshButton() {
         disabled={isPending}
         className="px-3 py-2 font-medium"
       >
-        {isPending ? "Refreshing..." : "Refresh Client"}
+        {isPending ? "Updating..." : "Update All"}
       </Button>
     </form>
   );
