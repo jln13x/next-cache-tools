@@ -1,4 +1,4 @@
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import { createCacheTag } from "next-cache-tools";
 import { cacheGroup } from "@/app/cache";
 
@@ -20,6 +20,15 @@ async function delayedCache() {
 
   return {
     delayed: "foo_bar",
+    timestamp: Date.now(),
+  };
+}
+
+async function foo() {
+  "use cache";
+  cacheTag("foo");
+
+  return {
     timestamp: Date.now(),
   };
 }
@@ -70,6 +79,7 @@ export default async function Page() {
   const user2 = await getUserById("user-2");
   const user3 = await getUserById("user-3");
   const admin1 = await getUserById("admin-1");
+  await foo();
   const fastExpiryData = await getFastExpiry();
   const staleData = await getStaleData();
 
