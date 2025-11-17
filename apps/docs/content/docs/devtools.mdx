@@ -30,7 +30,6 @@ Add the devtools component to your root layout:
 
 ```typescript
 import { CacheDevTools } from "next-cache-tools/devtools";
-import { Suspense } from "react";
 
 export default function RootLayout({
   children,
@@ -53,11 +52,13 @@ export default function RootLayout({
 The devtools panel will automatically appear in development mode, providing:
 
 - **All cache tags** with their associated data
-- **Grouped tags** organized by namespace
 - **Search functionality** to quickly find specific tags
 - **Individual tag revalidation** for targeted cache invalidation
+
+For tags created by `next-cache-tools`:
+
+- **Grouped tags** organized by namespace
 - **Group revalidation** to invalidate entire tag groups
-- **Real-time polling** (updates every 2 seconds)
 
 ## Development Only
 
