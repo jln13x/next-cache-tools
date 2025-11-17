@@ -52,6 +52,25 @@ async function getUserById(id: string) {
 
 Learn more about [Cache Tags](/docs/cache-tag).
 
+## Revalidating a Single Cache Tag
+
+To revalidate or update a specific cache entry, use the `filter` option with the same arguments used when tagging:
+
+```typescript
+import { userTag } from "@/app/cache";
+
+// Revalidate a specific user
+userTag.revalidate({
+  filter: { id: "user-123" },
+});
+
+// Update a specific user
+userTag.update({
+  filter: { id: "user-123" },
+});
+```
+
+Learn more about [Revalidation & Updates](/docs/revalidation).
 
 ## (Optional) Group your Tags
 
