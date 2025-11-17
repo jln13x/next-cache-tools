@@ -38,6 +38,12 @@ export const cacheGroup = createCacheTagGroup("app", {
     },
   },
 });
+
+async function getUser(id: string) {
+  "use cache";
+  cacheGroup.users.byId.tag({ id });
+  return { id, name: `User ${id}` };
+}
 ```
 
 ## Revalidating Groups

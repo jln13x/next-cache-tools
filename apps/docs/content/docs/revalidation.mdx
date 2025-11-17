@@ -3,7 +3,7 @@ title: Revalidation & Updates
 description: Selective cache invalidation and updates using filters and predicates
 ---
 
-Both `.revalidate()` and `.update()` methods support selective operations using `filter` and `predicate` options. These work on individual cache tags, allowing you to target specific cached entries.
+Both `.revalidate()` and `.update()` methods support selective operations using `filter` and `predicate` options. These work on individual cache tags, allowing you to target specific cached entries created with Next.js's `"use cache"` directive.
 
 ## Filter Option
 
@@ -15,6 +15,12 @@ import { createCacheTag } from "next-cache-tools";
 const userTag = createCacheTag({
   cacheKey: ({ id }: { id: string }) => id,
 });
+
+async function getUser(id: string) {
+  "use cache";
+  userTag.tag({ id });
+  return { id, name: `User ${id}` };
+}
 
 // Tag a user
 userTag.tag({ id: "user-123" });
@@ -40,6 +46,12 @@ import { createCacheTag } from "next-cache-tools";
 const userTag = createCacheTag({
   cacheKey: ({ id }: { id: string }) => id,
 });
+
+async function getUser(id: string) {
+  "use cache";
+  userTag.tag({ id });
+  return { id, name: `User ${id}` };
+}
 
 // Tag multiple users
 userTag.tag({ id: "user-1" });
@@ -95,6 +107,12 @@ const cacheGroup = createCacheTagGroup("app", {
     }),
   },
 });
+
+async function getUserById(id: string) {
+  "use cache";
+  cacheGroup.users.byId.tag({ id });
+  return { id, name: `User ${id}` };
+}
 
 // Revalidate a specific user by ID
 cacheGroup.users.byId.revalidate({
