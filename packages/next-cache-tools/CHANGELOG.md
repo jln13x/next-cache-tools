@@ -1,5 +1,11 @@
 # next-cache-tools
 
+## 0.0.3
+
+### Patch Changes
+
+- d98095d: release
+
 ## 0.0.2
 
 ### Patch Changes
