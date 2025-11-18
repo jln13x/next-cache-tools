@@ -206,6 +206,10 @@ function createDefaultCacheHandler(maxSize: number): CacheHandler {
     getCacheEntries() {
       return memoryCache.cache;
     },
+
+    clear() {
+      memoryCache.cache.clear();
+    },
   } as CacheHandler;
 
   return handler;

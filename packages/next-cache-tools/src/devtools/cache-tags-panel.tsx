@@ -11,11 +11,12 @@ import React, {
 import { createPortal } from "react-dom";
 import { GLOBAL_CACHE_TAG, hasPrefix, stripPrefix } from "../shared";
 import {
+  clearCacheAction,
   fetchCacheTagsAction,
   revalidateTagAction,
   updateTagAction,
 } from "./actions";
-import type { TagData } from "./getCacheFiles";
+import type { TagData } from "./get-cache-tags";
 import { Logo } from "./logo";
 import { TagGroup } from "./tag-group";
 import {
@@ -139,7 +140,14 @@ function Panel({
 
   const handlePollMemoryCache = async () => {
     const memoryTags = await fetchCacheTagsAction();
+    console.log("memoryTags", memoryTags);
     setMemoryCacheTags(memoryTags);
+  };
+
+  const handleCacheCleared = async () => {
+    const updatedTags = await fetchCacheTagsAction();
+    setTags(updatedTags);
+    setInvalidatedTags(new Map());
   };
 
   const isTagOutdated = (t: TagWithData) => {
@@ -154,6 +162,7 @@ function Panel({
         </div>
         <div className="flex gap-2 items-center">
           <PollMemoryCacheButton onPolled={handlePollMemoryCache} />
+          <ClearCacheButton onCleared={handleCacheCleared} />
           <RevalidateAllButton onInvalidated={handleInvalidateAll} />
           <UpdateAllButton
             tags={filteredTags.map(({ tag }) => tag)}
@@ -352,7 +361,7 @@ function TagPreview({
               </h3>
               {invalidatedTags.has(selectedTag) && <InvalidatedIcon />}
               {isTagOutdated({ tag: selectedTag, data: tagData.data }) && (
-                <Badge type="outdated" />
+                <OutdatedIcon />
               )}
             </div>
           </div>
@@ -390,11 +399,6 @@ function TagPreview({
               </div>
               <div className="text-sm text-muted-foreground">
                 {entry.data !== undefined && <DataPreview data={entry.data} />}
-                {entry.tags.length > 0 && (
-                  <div className="text-xs text-muted-foreground mt-2">
-                    Tags: {entry.tags.join(", ")}
-                  </div>
-                )}
                 <div className="flex gap-4 flex-wrap mt-2 text-xs text-muted-foreground">
                   <span>
                     <strong>Expiry:</strong> {formatDuration(entry.expire)}
@@ -476,7 +480,7 @@ export function Tag({
               <BadgeWithCount type="expired" count={entryCounts.expired} />
             )}
             {isInvalidated && <InvalidatedIcon />}
-            {isOutdated && <Badge type="outdated" />}
+            {isOutdated && <OutdatedIcon />}
           </div>
         </code>
       </div>
@@ -553,6 +557,36 @@ function InvalidatedIcon() {
   );
 }
 
+function OutdatedIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="text-[#ffaa00]"
+      aria-label="Outdated"
+    >
+      <title>Outdated</title>
+      <circle
+        cx="6"
+        cy="6"
+        r="4.5"
+        stroke="currentColor"
+        strokeWidth="1"
+        fill="none"
+      />
+      <path
+        d="M6 3V6L8 8"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function Badge({ type }: { type: "fresh" | "stale" | "expired" | "outdated" }) {
   const labelClasses = {
     fresh: "bg-[#004400] text-[#88ff88]",
@@ -600,8 +634,7 @@ function BadgeWithCount({
     <span
       className={`text-[0.7rem] px-1.5 py-0.5 rounded ${labelClasses[type]}`}
     >
-      {labels[type]}
-      {count > 1 ? ` (${count})` : ""}
+      {labels[type]} ({count})
     </span>
   );
 }
@@ -710,6 +743,30 @@ function RevalidateAllButton({ onInvalidated }: { onInvalidated: () => void }) {
   );
 }
 
+function ClearCacheButton({ onCleared }: { onCleared: () => Promise<void> }) {
+  const [isPending, startTransition] = useTransition();
+
+  return (
+    <form
+      action={() => {
+        startTransition(async () => {
+          await clearCacheAction();
+          await onCleared();
+        });
+      }}
+    >
+      <Button
+        variant="secondary"
+        type="submit"
+        disabled={isPending}
+        className="px-3 py-2 font-medium"
+      >
+        {isPending ? "Clearing..." : "Clear Cache"}
+      </Button>
+    </form>
+  );
+}
+
 export function RevalidateGroupButton({
   tags,
   onInvalidated,
@@ -775,22 +832,88 @@ function PollMemoryCacheButton({
 }: {
   onPolled: () => Promise<void>;
 }) {
-  const [isPending, startTransition] = useTransition();
+  const [isPolling, setIsPolling] = useState(false);
+  const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!isPolling) return;
+
+    const interval = setInterval(() => {
+      startTransition(async () => {
+        await onPolled();
+      });
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isPolling, onPolled]);
 
   return (
-    <Button
-      variant="secondary"
-      type="button"
-      onClick={() => {
-        startTransition(async () => {
-          await onPolled();
-        });
-      }}
-      disabled={isPending}
-      className="px-3 py-2 font-medium"
-    >
-      {isPending ? "Polling..." : "Poll Memory Cache"}
-    </Button>
+    <div className="flex items-center gap-2">
+      {isPolling && (
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 bg-[#88ff88] rounded-full animate-pulse" />
+          <span className="text-xs text-muted-foreground">Polling</span>
+        </div>
+      )}
+      <Button
+        variant="secondary"
+        type="button"
+        onClick={() => {
+          if (!isPolling) {
+            startTransition(async () => {
+              await onPolled();
+            });
+          }
+          setIsPolling(!isPolling);
+        }}
+        className="px-3 py-2 font-medium flex items-center gap-1.5"
+      >
+        {isPolling ? (
+          <>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <title>Pause</title>
+              <rect
+                x="2"
+                y="2"
+                width="3"
+                height="8"
+                rx="0.5"
+                fill="currentColor"
+              />
+              <rect
+                x="7"
+                y="2"
+                width="3"
+                height="8"
+                rx="0.5"
+                fill="currentColor"
+              />
+            </svg>
+            Pause
+          </>
+        ) : (
+          <>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <title>Play</title>
+              <path d="M3 2L10 6L3 10V2Z" fill="currentColor" />
+            </svg>
+            Play
+          </>
+        )}
+      </Button>
+    </div>
   );
 }
 

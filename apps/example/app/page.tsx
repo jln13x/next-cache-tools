@@ -1,4 +1,5 @@
 import { cacheLife, cacheTag } from "next/cache";
+import Link from "next/link";
 import { createCacheTag } from "next-cache-tools";
 import { cacheGroup } from "@/app/cache";
 
@@ -336,6 +337,10 @@ export default async function Page() {
           </div>
         </div>
       </div>
+
+      <Link href="/sub" className="text-blue-500">
+        Subpage
+      </Link>
     </div>
   );
 }

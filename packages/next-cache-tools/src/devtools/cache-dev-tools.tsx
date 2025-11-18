@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { CacheTagsPanel } from "./cache-tags-panel";
-import type { TagData } from "./getCacheFiles";
-import { getAllCacheTags } from "./getCacheFiles";
+import type { TagData } from "./get-cache-tags";
+import { getAllCacheTags } from "./get-cache-tags";
 
 import "./index.css";
 

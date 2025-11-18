@@ -1,4 +1,4 @@
-import type { TagData } from "./getCacheFiles";
+import type { TagData } from "./get-cache-tags";
 
 export interface TagWithData {
   tag: string;
