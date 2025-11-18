@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import React, {
   type ComponentType,
   useEffect,
+  useMemo,
   useState,
   useTransition,
 } from "react";
@@ -388,50 +389,51 @@ function TagPreview({
                 </div>
               </div>
               <div className="text-sm text-muted-foreground">
-                {(entry.data !== undefined || entry.dataPreview) && (
-                  <div className="mt-2">
-                    <pre className="m-0 text-xs text-muted-foreground whitespace-pre-wrap break-words bg-muted p-2 rounded max-h-[300px] overflow-auto">
-                      {entry.data !== undefined
-                        ? typeof entry.data === "string"
-                          ? entry.data
-                          : JSON.stringify(entry.data, null, 2)
-                        : entry.dataPreview}
-                    </pre>
-                  </div>
-                )}
+                {entry.data !== undefined && <DataPreview data={entry.data} />}
                 {entry.tags.length > 0 && (
                   <div className="text-xs text-muted-foreground mt-2">
                     Tags: {entry.tags.join(", ")}
                   </div>
                 )}
-                {(entry.expire !== undefined ||
-                  entry.revalidate !== undefined ||
-                  entry.stale !== undefined) && (
-                  <div className="flex gap-4 flex-wrap mt-2 text-xs text-muted-foreground">
-                    {entry.expire !== undefined && (
-                      <span>
-                        <strong>Expiry:</strong> {formatDuration(entry.expire)}
-                      </span>
-                    )}
-                    {entry.revalidate !== undefined && (
-                      <span>
-                        <strong>Revalidate:</strong>{" "}
-                        {formatDuration(entry.revalidate)}
-                      </span>
-                    )}
-                    {entry.stale !== undefined && (
-                      <span>
-                        <strong>Stale:</strong> {formatDuration(entry.stale)}
-                      </span>
-                    )}
-                  </div>
-                )}
+                <div className="flex gap-4 flex-wrap mt-2 text-xs text-muted-foreground">
+                  <span>
+                    <strong>Expiry:</strong> {formatDuration(entry.expire)}
+                  </span>
+                  <span>
+                    <strong>Revalidate:</strong>{" "}
+                    {formatDuration(entry.revalidate)}
+                  </span>
+                  <span>
+                    <strong>Stale:</strong> {formatDuration(entry.stale)}
+                  </span>
+                </div>
               </div>
             </div>
           );
         })}
       </div>
     </div>
+  );
+}
+
+function parseData(data: unknown) {
+  try {
+    return JSON.parse(data as string);
+  } catch {
+    return data;
+  }
+}
+
+function DataPreview({ data }: { data: unknown }) {
+  const parsedData = useMemo(() => {
+    return parseData(data);
+  }, [data]);
+  return (
+    <pre className="m-0 text-xs text-muted-foreground whitespace-pre-wrap break-words bg-muted p-2 rounded max-h-[300px] overflow-auto">
+      {typeof parsedData === "string"
+        ? parsedData
+        : JSON.stringify(parsedData, null, 2)}
+    </pre>
   );
 }
 

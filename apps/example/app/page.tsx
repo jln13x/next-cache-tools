@@ -53,10 +53,7 @@ async function getStaleData() {
   staleTag.tag();
   cacheLife({ stale: 5, revalidate: 60, expire: 300 });
 
-  return {
-    type: "stale-data",
-    timestamp: Date.now(),
-  };
+  return `stale-data_${Date.now()}`;
 }
 
 async function getUserById(id: string) {

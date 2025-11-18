@@ -4,11 +4,10 @@ export interface TagData {
   key: string;
   tags: string[];
   timestamp: number;
-  expire?: number;
-  revalidate?: number;
-  stale?: number;
+  expire: number;
+  revalidate: number;
+  stale: number;
   data?: unknown;
-  dataPreview?: string;
 }
 
 async function getInMemoryTags(): Promise<Map<string, TagData[]>> {
@@ -49,7 +48,6 @@ async function getInMemoryTags(): Promise<Map<string, TagData[]>> {
         revalidate: entry.revalidate,
         stale: entry.stale,
         data: undefined,
-        dataPreview: undefined,
       };
 
       // Read stream data if available
@@ -83,51 +81,16 @@ async function getInMemoryTags(): Promise<Map<string, TagData[]>> {
               offset += chunk.length;
             }
 
-            try {
-              const decoder = new TextDecoder();
-              const text = decoder.decode(combined);
+            const decoder = new TextDecoder();
+            const text = decoder.decode(combined);
+            const lines = text.trim().split("\n");
 
-              const jsonObjects: unknown[] = [];
-              const lines = text.split("\n");
-
-              for (const line of lines) {
-                const trimmed = line.trim();
-                if (!trimmed) continue;
-
-                const match = trimmed.match(/^\d+:(?:D)?(\{.*\})$/);
-                if (match?.[1]) {
-                  try {
-                    const jsonObj = JSON.parse(match[1]);
-                    jsonObjects.push(jsonObj);
-                  } catch {
-                    // Not valid JSON
-                  }
-                } else if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-                  try {
-                    const jsonObj = JSON.parse(trimmed);
-                    jsonObjects.push(jsonObj);
-                  } catch {
-                    // Not valid JSON
-                  }
-                }
-              }
-
-              if (jsonObjects.length > 0) {
-                tagData.data = jsonObjects[jsonObjects.length - 1];
-                tagData.dataPreview = JSON.stringify(tagData.data, null, 2);
-                if (tagData.dataPreview.length > 200) {
-                  tagData.dataPreview =
-                    tagData.dataPreview.substring(0, 200) + "...";
-                }
-              } else {
-                tagData.dataPreview =
-                  text.length > 200 ? text.substring(0, 200) + "..." : text;
-                tagData.data = text;
-              }
-            } catch {
-              tagData.dataPreview = `Binary data (${combined.length} bytes)`;
-              tagData.data = combined;
+            const lastLine = lines.at(-1);
+            if (!lastLine) {
+              throw new Error("next-cache-tools: Failed to read stream");
             }
+
+            tagData.data = lastLine.trim().slice(2);
           }
         } catch {
           // Failed to read stream
