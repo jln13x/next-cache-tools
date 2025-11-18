@@ -349,7 +349,7 @@ function TagPreview({
               <h3 className="text-white m-0 text-2xl font-bold">
                 {formatTagForDisplay(selectedTag)}
               </h3>
-              {invalidatedTags.has(selectedTag) && <Badge type="invalidated" />}
+              {invalidatedTags.has(selectedTag) && <InvalidatedIcon />}
               {isTagOutdated({ tag: selectedTag, data: tagData.data }) && (
                 <Badge type="outdated" />
               )}
@@ -473,7 +473,7 @@ export function Tag({
             {entryCounts.expired > 0 && (
               <BadgeWithCount type="expired" count={entryCounts.expired} />
             )}
-            {isInvalidated && <Badge type="invalidated" />}
+            {isInvalidated && <InvalidatedIcon />}
             {isOutdated && <Badge type="outdated" />}
           </div>
         </code>
@@ -523,15 +523,38 @@ function Button({
   );
 }
 
-function Badge({
-  type,
-}: {
-  type: "fresh" | "stale" | "invalidated" | "expired" | "outdated";
-}) {
+function InvalidatedIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="text-[#88ccff]"
+      aria-label="Invalidated"
+    >
+      <title>Invalidated</title>
+      <path
+        d="M6 1.5C3.51562 1.5 1.5 3.51562 1.5 6C1.5 8.48438 3.51562 10.5 6 10.5C8.48438 10.5 10.5 8.48438 10.5 6C10.5 3.51562 8.48438 1.5 6 1.5ZM6 9.75C4.20508 9.75 2.75 8.29492 2.75 6C2.75 3.70508 4.20508 2.25 6 2.25C7.79492 2.25 9.25 3.70508 9.25 6C9.25 8.29492 7.79492 9.75 6 9.75Z"
+        fill="currentColor"
+      />
+      <path
+        d="M8.25 3.75L9.53033 2.46967L10.2197 3.15901L8.93934 4.43934L8.25 3.75ZM3.75 3.75L2.46967 2.46967L1.78033 3.15901L3.06066 4.43934L3.75 3.75ZM6 2.25V3.75H6.75V2.25H6Z"
+        fill="currentColor"
+      />
+      <path
+        d="M8.25 8.25L9.53033 9.53033L10.2197 8.84099L8.93934 7.56066L8.25 8.25ZM3.75 8.25L2.46967 9.53033L1.78033 8.84099L3.06066 7.56066L3.75 8.25ZM6 8.25V9.75H6.75V8.25H6Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function Badge({ type }: { type: "fresh" | "stale" | "expired" | "outdated" }) {
   const labelClasses = {
     fresh: "bg-[#004400] text-[#88ff88]",
     stale: "bg-[#664400] text-[#ffaa00]",
-    invalidated: "bg-[#004466] text-[#88ccff]",
     expired: "bg-[#440000] text-[#ff8888]",
     outdated: "bg-[#664400] text-[#ffaa00]",
   };
@@ -539,7 +562,6 @@ function Badge({
   const labels = {
     fresh: "fresh",
     stale: "stale",
-    invalidated: "invalidated",
     expired: "expired",
     outdated: "outdated",
   };

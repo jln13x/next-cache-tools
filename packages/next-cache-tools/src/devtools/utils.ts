@@ -46,18 +46,24 @@ export function getEntryBadgeType(
   entry: TagData,
   now: number = Date.now(),
 ): "fresh" | "stale" | "expired" | null {
-  if (entry.expire !== undefined) {
-    const expireTime = entry.timestamp + entry.expire * 1000;
-    if (expireTime < now) {
+  const { timestamp, expire, stale } = entry;
+
+  if (expire !== undefined) {
+    const expireTime = timestamp + expire * 1000;
+    if (now >= expireTime) {
       return "expired";
     }
   }
 
-  if (entry.stale !== undefined) {
-    const staleTime = entry.timestamp + entry.stale * 1000;
-    if (staleTime < now) {
+  if (stale !== undefined) {
+    const staleTime = timestamp + stale * 1000;
+    if (now >= staleTime) {
       return "stale";
     }
+    return "fresh";
+  }
+
+  if (expire !== undefined) {
     return "fresh";
   }
 
