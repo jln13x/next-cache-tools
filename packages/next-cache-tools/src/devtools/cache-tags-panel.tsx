@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import React, {
   type ComponentType,
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -138,11 +139,11 @@ function Panel({
     });
   };
 
-  const handlePollMemoryCache = async () => {
+  const handlePollMemoryCache = useCallback(async () => {
     const memoryTags = await fetchCacheTagsAction();
     console.log("memoryTags", memoryTags);
     setMemoryCacheTags(memoryTags);
-  };
+  }, []);
 
   const handleCacheCleared = async () => {
     const updatedTags = await fetchCacheTagsAction();
