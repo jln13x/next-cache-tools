@@ -110,7 +110,7 @@ export function isTagOutdated(
 
   const anyDataOutdated = tag.data.some((d) => {
     const memoryData = memoryDataByKeys.get(d.key);
-    return memoryData ? d.timestamp < memoryData.timestamp : true;
+    return memoryData ? d.timestamp !== memoryData.timestamp : true;
   });
 
   return anyDataOutdated;

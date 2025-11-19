@@ -117,6 +117,22 @@ function Panel({
         }
         return newTags;
       });
+      setMemoryCacheTags((prev) => {
+        if (!prev) return prev;
+        const newMemoryTags = [...prev];
+        const index = newMemoryTags.findIndex((t) => t.tag === tag);
+        if (index !== -1) {
+          newMemoryTags[index] = updatedTagData;
+        } else {
+          newMemoryTags.push(updatedTagData);
+        }
+        return newMemoryTags;
+      });
+      setInvalidatedTags((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(tag);
+        return newMap;
+      });
     }
   };
 
@@ -137,13 +153,59 @@ function Panel({
       });
       return newTags;
     });
+    setMemoryCacheTags((prev) => {
+      if (!prev) return prev;
+      const newMemoryTags = [...prev];
+      tagsToUpdate.forEach((tag) => {
+        const updatedTagData = updatedTags.find((t) => t.tag === tag);
+        if (updatedTagData) {
+          const index = newMemoryTags.findIndex((t) => t.tag === tag);
+          if (index !== -1) {
+            newMemoryTags[index] = updatedTagData;
+          } else {
+            newMemoryTags.push(updatedTagData);
+          }
+        }
+      });
+      return newMemoryTags;
+    });
+    setInvalidatedTags((prev) => {
+      const newMap = new Map(prev);
+      tagsToUpdate.forEach((tag) => {
+        newMap.delete(tag);
+      });
+      return newMap;
+    });
   };
 
-  const handlePollMemoryCache = useCallback(async () => {
+  const handleLiveMemoryCache = useCallback(async () => {
     const memoryTags = await fetchCacheTagsAction();
-    console.log("memoryTags", memoryTags);
     setMemoryCacheTags(memoryTags);
   }, []);
+
+  const handleRefreshTag = useCallback(
+    (tag: string) => {
+      if (!memoryCacheTags) return;
+      const liveTagData = memoryCacheTags.find((t) => t.tag === tag);
+      if (!liveTagData) return;
+      setTags((prev) => {
+        const newTags = [...prev];
+        const index = newTags.findIndex((t) => t.tag === tag);
+        if (index !== -1) {
+          newTags[index] = liveTagData;
+        } else {
+          newTags.push(liveTagData);
+        }
+        return newTags;
+      });
+      setInvalidatedTags((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(tag);
+        return newMap;
+      });
+    },
+    [memoryCacheTags],
+  );
 
   const handleCacheCleared = async () => {
     const updatedTags = await fetchCacheTagsAction();
@@ -151,9 +213,20 @@ function Panel({
     setInvalidatedTags(new Map());
   };
 
-  const isTagOutdated = (t: TagWithData) => {
-    return checkTagOutdated(t, memoryCacheTags);
-  };
+  const isTagOutdated = useCallback(
+    (t: TagWithData) => {
+      return checkTagOutdated(t, memoryCacheTags);
+    },
+    [memoryCacheTags],
+  );
+
+  const handleRefreshOutdated = useCallback(() => {
+    const outdatedTags = tags.filter((t) => isTagOutdated(t));
+
+    outdatedTags.forEach((t) => {
+      handleRefreshTag(t.tag);
+    });
+  }, [tags, handleRefreshTag, isTagOutdated]);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 max-h-[50vh] z-[10000] flex flex-col overflow-hidden">
@@ -162,7 +235,17 @@ function Panel({
           <Logo />
         </div>
         <div className="flex gap-2 items-center">
-          <PollMemoryCacheButton onPolled={handlePollMemoryCache} />
+          <PollMemoryCacheButton onLive={handleLiveMemoryCache} />
+          {memoryCacheTags && filteredTags.some((t) => isTagOutdated(t)) && (
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={handleRefreshOutdated}
+              className="px-3 py-2 font-medium"
+            >
+              Refresh Outdated
+            </Button>
+          )}
           <ClearCacheButton onCleared={handleCacheCleared} />
           <RevalidateAllButton onInvalidated={handleInvalidateAll} />
           <UpdateAllButton
@@ -254,6 +337,8 @@ function Panel({
             onTagUpdated={handleTagUpdated}
             currentTime={currentTime}
             isTagOutdated={isTagOutdated}
+            memoryCacheTags={memoryCacheTags}
+            onTagRefreshed={handleRefreshTag}
           />
         )}
       </div>
@@ -321,6 +406,8 @@ function TagPreview({
   onTagUpdated,
   currentTime,
   isTagOutdated,
+  memoryCacheTags,
+  onTagRefreshed,
 }: {
   selectedTag: string;
   tags: TagWithData[];
@@ -329,6 +416,8 @@ function TagPreview({
   onTagUpdated: (tag: string) => Promise<void>;
   currentTime: number;
   isTagOutdated: (t: TagWithData) => boolean;
+  memoryCacheTags: TagWithData[] | null;
+  onTagRefreshed: (tag: string) => void;
 }) {
   const tagData = tags.find((t) => t.tag === selectedTag);
 
@@ -365,11 +454,21 @@ function TagPreview({
                 <OutdatedIcon />
               )}
             </div>
+            {invalidatedTags.has(selectedTag) && (
+              <p className="text-xs text-[#88ccff] bg-[#88ccff]/10 m-0 mt-1 px-2 py-1 rounded">
+                This tag will be revalidated in the background upon next
+                execution.
+              </p>
+            )}
           </div>
           <RevalidateButton
             tag={selectedTag}
             onInvalidated={() => onTagInvalidated(selectedTag)}
           />
+          {memoryCacheTags &&
+            isTagOutdated({ tag: selectedTag, data: tagData.data }) && (
+              <RefreshButton onRefreshed={() => onTagRefreshed(selectedTag)} />
+            )}
           <UpdateButton
             tag={selectedTag}
             onUpdated={() => onTagUpdated(selectedTag)}
@@ -665,6 +764,14 @@ function RevalidateButton({
   );
 }
 
+function RefreshButton({ onRefreshed }: { onRefreshed: () => void }) {
+  return (
+    <Button variant="secondary" type="button" onClick={onRefreshed}>
+      Refresh
+    </Button>
+  );
+}
+
 function UpdateButton({
   tag,
   onUpdated,
@@ -828,93 +935,41 @@ export function UpdateGroupButton({
   );
 }
 
-function PollMemoryCacheButton({
-  onPolled,
-}: {
-  onPolled: () => Promise<void>;
-}) {
-  const [isPolling, setIsPolling] = useState(false);
+function PollMemoryCacheButton({ onLive }: { onLive: () => Promise<void> }) {
+  const [isLive, setIsLive] = useState(false);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
-    if (!isPolling) return;
+    if (!isLive) return;
 
     const interval = setInterval(() => {
       startTransition(async () => {
-        await onPolled();
+        await onLive();
       });
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [isPolling, onPolled]);
+  }, [isLive, onLive]);
 
   return (
-    <div className="flex items-center gap-2">
-      {isPolling && (
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 bg-[#88ff88] rounded-full animate-pulse" />
-          <span className="text-xs text-muted-foreground">Polling</span>
-        </div>
-      )}
-      <Button
-        variant="secondary"
-        type="button"
-        onClick={() => {
-          if (!isPolling) {
-            startTransition(async () => {
-              await onPolled();
-            });
-          }
-          setIsPolling(!isPolling);
-        }}
-        className="px-3 py-2 font-medium flex items-center gap-1.5"
-      >
-        {isPolling ? (
-          <>
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <title>Pause</title>
-              <rect
-                x="2"
-                y="2"
-                width="3"
-                height="8"
-                rx="0.5"
-                fill="currentColor"
-              />
-              <rect
-                x="7"
-                y="2"
-                width="3"
-                height="8"
-                rx="0.5"
-                fill="currentColor"
-              />
-            </svg>
-            Pause
-          </>
-        ) : (
-          <>
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <title>Play</title>
-              <path d="M3 2L10 6L3 10V2Z" fill="currentColor" />
-            </svg>
-            Play
-          </>
-        )}
-      </Button>
-    </div>
+    <Button
+      variant="secondary"
+      type="button"
+      onClick={() => {
+        if (!isLive) {
+          startTransition(async () => {
+            await onLive();
+          });
+        }
+        setIsLive(!isLive);
+      }}
+      className="px-3 py-2 font-medium flex items-center gap-1.5"
+    >
+      <div
+        className={`w-2 h-2 rounded-full ${isLive ? "bg-[#88ff88] animate-pulse" : "bg-[#440000]"}`}
+      />
+      Live
+    </Button>
   );
 }
 

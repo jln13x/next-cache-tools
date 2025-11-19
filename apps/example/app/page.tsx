@@ -15,6 +15,7 @@ async function getMetrics() {
     memory: Math.round(Math.random() * 16000),
     activeUsers: Math.floor(Math.random() * 1000),
     timestamp: Date.now(),
+    version: Math.random(),
   };
 }
 
@@ -221,12 +222,11 @@ export default async function DashboardPage() {
                 <span className="font-mono">{metrics.activeUsers}</span>
               </div>
             </div>
-
             <div className="mt-4 bg-blue-50 text-blue-700 text-xs p-3 rounded-md">
               ℹ️ configured with <code>expire: 2</code>. It will automatically
               update data every 2 seconds when accessed.
             </div>
-
+            Version: {metrics.version}
             <Timestamp time={metrics.timestamp} />
           </Card>
 

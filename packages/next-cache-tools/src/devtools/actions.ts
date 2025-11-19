@@ -2,7 +2,7 @@
 
 import { refresh, revalidateTag, updateTag } from "next/cache";
 import { getCacheHandler } from "./get-cache-handler";
-import { getAllCacheTags } from "./get-cache-tags";
+import { getAllCacheTags, type TagData } from "./get-cache-tags";
 
 export async function revalidateTagAction(tag: string) {
   revalidateTag(tag, "default");
