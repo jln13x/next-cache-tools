@@ -1,5 +1,11 @@
 # next-cache-tools
 
+## 0.0.5
+
+### Patch Changes
+
+- 266e776: release
+
 ## 0.0.4
 
 ### Patch Changes
