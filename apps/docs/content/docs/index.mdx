@@ -34,6 +34,22 @@ async function getUser(id: string) {
 }
 ```
 
+When `cacheKey` doesn't require parameters, you can call `.tag()` without arguments:
+
+```typescript
+const metricsTag = createCacheTag({
+  cacheKey: () => "metrics",
+});
+
+async function getMetrics() {
+  "use cache";
+  
+  metricsTag.tag();
+  
+  return { cpu: 50, memory: 8000 };
+}
+```
+
 
 ### Using Cache Tags
 
@@ -52,17 +68,23 @@ async function getUserById(id: string) {
 
 Learn more about [Cache Tags](/docs/cache-tag).
 
-## Revalidating a Single Cache Tag
+## Revalidating Cache Tags
 
-To revalidate or update a specific cache entry, use the `filter` option with the same arguments used when tagging:
+To revalidate or update cache entries:
 
 ```typescript
 import { userTag } from "@/app/cache";
+
+// Revalidate all entries for this tag
+userTag.revalidate();
 
 // Revalidate a specific user
 userTag.revalidate({
   filter: { id: "user-123" },
 });
+
+// Update all entries for this tag
+userTag.update();
 
 // Update a specific user
 userTag.update({
