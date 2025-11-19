@@ -1,346 +1,296 @@
-import { cacheLife, cacheTag } from "next/cache";
-import Link from "next/link";
-import { createCacheTag } from "next-cache-tools";
-import { cacheGroup } from "@/app/cache";
+import { cacheLife } from "next/cache";
+import { dashboardCache } from "./cache";
 
-const standalone = createCacheTag({
-  cacheKey: () => "standalone",
-});
-
-const fastExpiry = createCacheTag({
-  cacheKey: () => "fast-expiry",
-});
-
-const staleTag = createCacheTag({
-  cacheKey: () => "stale-data",
-});
-
-async function delayedCache() {
+async function getMetrics() {
   "use cache";
-  standalone.tag();
+  dashboardCache.metrics.tag();
+  dashboardCache.metrics.life({
+    profile: {
+      expire: 2,
+    },
+  });
 
   return {
-    delayed: "foo_bar",
+    cpu: Math.round(Math.random() * 100),
+    memory: Math.round(Math.random() * 16000),
+    activeUsers: Math.floor(Math.random() * 1000),
     timestamp: Date.now(),
   };
 }
 
-async function foo() {
+async function getSystemAlerts() {
   "use cache";
-  cacheTag("foo");
+  dashboardCache.alerts.tag();
+  dashboardCache.alerts.life({ profile: "max" });
+
+  const alerts = [
+    "System operating normally.",
+    "Scheduled maintenance at 00:00 UTC.",
+    "New features deployed successfully.",
+  ];
+
+  const status = Math.random() > 0.5 ? "Healthy" : "Attention Needed";
 
   return {
+    status,
+    message: alerts[Math.floor(Math.random() * alerts.length)],
     timestamp: Date.now(),
   };
 }
 
-async function getFastExpiry() {
+async function getUserProfile(id: string) {
   "use cache";
-  console.log("[page] getFastExpiry called");
+  dashboardCache.users.profile.tag({ id });
+  dashboardCache.users.profile.life({ profile: "max" });
 
-  fastExpiry.tag();
-  cacheLife({ expire: 5 });
-
-  return {
-    type: "fast-expiry",
-    timestamp: Date.now(),
+  const names: Record<string, string> = {
+    "user-1": "Alice Chen",
+    "user-2": "Bob Smith",
+    "user-3": "Charlie Davis",
   };
-}
 
-async function getStaleData() {
-  "use cache";
-  console.log("[page] getStaleData called");
-
-  staleTag.tag();
-  cacheLife({ stale: 5, revalidate: 60, expire: 300 });
-
-  return `stale-data_${Date.now()}`;
-}
-
-async function getUserById(id: string) {
-  "use cache";
-  console.log(`[page] getUserById called for id: ${id}`);
-
-  cacheGroup.user.byId.tag({ id });
-  cacheLife("max");
+  const roles: Record<string, string> = {
+    "user-1": "Admin",
+    "user-2": "Editor",
+    "user-3": "Viewer",
+  };
 
   return {
     id,
-    name: `User ${id}`,
-    email: `user${id}@example.com`,
+    name: names[id] || `User ${id}`,
+    role: roles[id] || "User",
+    lastSeen: new Date().toISOString(),
     timestamp: Date.now(),
   };
 }
 
-export default async function Page() {
-  const user1 = await getUserById("user-1");
-  const user2 = await getUserById("user-2");
-  const user3 = await getUserById("user-3");
-  const admin1 = await getUserById("admin-1");
-  await foo();
-  const fastExpiryData = await getFastExpiry();
-  const staleData = await getStaleData();
+async function updateAlerts() {
+  "use server";
+  dashboardCache.alerts.update();
+}
 
-  const revalidateUser1 = async () => {
-    "use server";
-    cacheGroup.user.byId.update({
-      filter: { id: "user-1" },
-    });
-  };
+async function updateUser(id: string) {
+  "use server";
+  dashboardCache.users.profile.update({ filter: { id } });
+}
 
-  const revalidateUser2 = async () => {
-    "use server";
-    cacheGroup.user.byId.update({
-      filter: { id: "user-2" },
-    });
-  };
+async function updateAllUsers() {
+  "use server";
+  dashboardCache.users.profile.update();
+}
 
-  const delayed = async () => {
-    "use server";
-    await delayedCache();
-  };
+function Card({
+  title,
+  children,
+  className = "",
+}: {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col ${className}`}
+    >
+      <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+        <h3 className="font-semibold text-slate-900">{title}</h3>
+      </div>
+      <div className="p-6 flex-1 flex flex-col">{children}</div>
+    </div>
+  );
+}
 
-  const revalidateAllUsers = async () => {
-    "use server";
-    cacheGroup.user.byId.update({
-      predicate: (args) => args.id.startsWith("user-"),
-    });
-  };
-
-  const revalidateAllAdmins = async () => {
-    "use server";
-    cacheGroup.user.byId.update({
-      predicate: (args) => args.id.startsWith("admin-"),
-    });
+function Badge({
+  children,
+  variant = "default",
+}: {
+  children: React.ReactNode;
+  variant?: "default" | "success" | "warning";
+}) {
+  const colors = {
+    default: "bg-slate-100 text-slate-700",
+    success: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    warning: "bg-amber-50 text-amber-700 border-amber-200",
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <h1 className="text-4xl font-bold text-slate-900 mb-8">
-          Next.js Cache Tools Demo
-        </h1>
+    <span
+      className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${colors[variant]} border-transparent`}
+    >
+      {children}
+    </span>
+  );
+}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="bg-white rounded-lg shadow-md p-6 border border-slate-200">
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">
-              User 1
-            </h2>
-            <div className="space-y-2 text-sm">
-              <div>
-                <span className="font-medium text-slate-600">ID:</span>{" "}
-                <span className="text-slate-900">{user1.id}</span>
-              </div>
-              <div>
-                <span className="font-medium text-slate-600">Name:</span>{" "}
-                <span className="text-slate-900">{user1.name}</span>
-              </div>
-              <div>
-                <span className="font-medium text-slate-600">Email:</span>{" "}
-                <span className="text-slate-900">{user1.email}</span>
-              </div>
-              <div>
-                <span className="font-medium text-slate-600">Timestamp:</span>{" "}
-                <span className="text-slate-500 font-mono text-xs">
-                  {new Date(user1.timestamp).toLocaleTimeString()}
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={revalidateUser1}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
-            >
-              Revalidate User 1
-            </button>
+function Timestamp({ time }: { time: number }) {
+  return (
+    <div className="text-xs text-slate-400 font-mono mt-auto pt-4 flex justify-between items-center">
+      <span>Cached at:</span>
+      <span>{new Date(time).toLocaleTimeString()}</span>
+    </div>
+  );
+}
+
+export default async function DashboardPage() {
+  const metrics = await getMetrics();
+  const alerts = await getSystemAlerts();
+  const user1 = await getUserProfile("user-1");
+  const user2 = await getUserProfile("user-2");
+  const user3 = await getUserProfile("user-3");
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 p-8 font-sans">
+      <div className="max-w-5xl mx-auto space-y-8">
+        <div className="flex justify-between items-end pb-6 border-b border-slate-200">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+              Dashboard
+            </h1>
+            <p className="text-slate-500 mt-2">
+              Demonstrating Next.js Cache Tools with granular invalidation
+              strategies.
+            </p>
           </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6 border border-slate-200">
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">
-              User 2
-            </h2>
-            <div className="space-y-2 text-sm">
-              <div>
-                <span className="font-medium text-slate-600">ID:</span>{" "}
-                <span className="text-slate-900">{user2.id}</span>
-              </div>
-              <div>
-                <span className="font-medium text-slate-600">Name:</span>{" "}
-                <span className="text-slate-900">{user2.name}</span>
-              </div>
-              <div>
-                <span className="font-medium text-slate-600">Email:</span>{" "}
-                <span className="text-slate-900">{user2.email}</span>
-              </div>
-              <div>
-                <span className="font-medium text-slate-600">Timestamp:</span>{" "}
-                <span className="text-slate-500 font-mono text-xs">
-                  {new Date(user2.timestamp).toLocaleTimeString()}
-                </span>
-              </div>
+          <div className="text-right">
+            <div className="text-sm font-medium text-slate-500">
+              Current Time
             </div>
-            <button
-              type="button"
-              onClick={revalidateUser2}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
-            >
-              Revalidate User 2
-            </button>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6 border border-slate-200">
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">
-              Fast Expiry (5s)
-            </h2>
-            <div className="space-y-2 text-sm">
-              <div>
-                <span className="font-medium text-slate-600">Type:</span>{" "}
-                <span className="text-slate-900">{fastExpiryData.type}</span>
-              </div>
-              <div>
-                <span className="font-medium text-slate-600">Timestamp:</span>{" "}
-                <span className="text-slate-500 font-mono text-xs">
-                  {new Date(fastExpiryData.timestamp).toLocaleTimeString()}
-                </span>
-              </div>
-            </div>
-            <div className="mt-3 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-md">
-              <p className="text-xs text-yellow-800">
-                This cache expires after 5 seconds
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6 border border-slate-200">
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">
-              Stale Data
-            </h2>
-            <div className="space-y-2 text-sm">
-              <div>
-                <span className="font-medium text-slate-600">Type:</span>{" "}
-                <span className="text-slate-900">{staleData.type}</span>
-              </div>
-              <div>
-                <span className="font-medium text-slate-600">Timestamp:</span>{" "}
-                <span className="text-slate-500 font-mono text-xs">
-                  {new Date(staleData.timestamp).toLocaleTimeString()}
-                </span>
-              </div>
-            </div>
-            <div className="mt-3 px-3 py-2 bg-purple-50 border border-purple-200 rounded-md">
-              <p className="text-xs text-purple-800">
-                Stale: 5s | Revalidate: 60s | Expire: 300s
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6 border border-slate-200">
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">
-              User 3
-            </h2>
-            <div className="space-y-2 text-sm">
-              <div>
-                <span className="font-medium text-slate-600">ID:</span>{" "}
-                <span className="text-slate-900">{user3.id}</span>
-              </div>
-              <div>
-                <span className="font-medium text-slate-600">Name:</span>{" "}
-                <span className="text-slate-900">{user3.name}</span>
-              </div>
-              <div>
-                <span className="font-medium text-slate-600">Email:</span>{" "}
-                <span className="text-slate-900">{user3.email}</span>
-              </div>
-              <div>
-                <span className="font-medium text-slate-600">Timestamp:</span>{" "}
-                <span className="text-slate-500 font-mono text-xs">
-                  {new Date(user3.timestamp).toLocaleTimeString()}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6 border border-slate-200">
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">
-              Admin 1
-            </h2>
-            <div className="space-y-2 text-sm">
-              <div>
-                <span className="font-medium text-slate-600">ID:</span>{" "}
-                <span className="text-slate-900">{admin1.id}</span>
-              </div>
-              <div>
-                <span className="font-medium text-slate-600">Name:</span>{" "}
-                <span className="text-slate-900">{admin1.name}</span>
-              </div>
-              <div>
-                <span className="font-medium text-slate-600">Email:</span>{" "}
-                <span className="text-slate-900">{admin1.email}</span>
-              </div>
-              <div>
-                <span className="font-medium text-slate-600">Timestamp:</span>{" "}
-                <span className="text-slate-500 font-mono text-xs">
-                  {new Date(admin1.timestamp).toLocaleTimeString()}
-                </span>
-              </div>
+            <div className="font-mono text-lg">
+              {new Date().toLocaleTimeString()}
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6 border border-slate-200">
-          <h2 className="text-xl font-semibold text-slate-800 mb-4">
-            Predicate-Based Revalidation Examples
-          </h2>
-          <div className="space-y-4">
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm text-blue-800 mb-2">
-                <strong>Example:</strong> Revalidate all users whose ID starts
-                with "user-"
-              </p>
-              <code className="text-xs bg-white px-2 py-1 rounded block">
-                cacheGroup.user.byId.revalidate({`{`}
-                <br />
-                {"  "}predicate: (args) =&gt; args.id.startsWith("user-"),
-                <br />
-                {`}`});
-              </code>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card title="Live Metrics (Auto-Refresh)">
+            <div className="space-y-4 mb-4">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600">CPU Usage</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 transition-all duration-500"
+                      style={{ width: `${metrics.cpu}%` }}
+                    />
+                  </div>
+                  <span className="font-mono w-8 text-right">
+                    {metrics.cpu}%
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600">Memory</span>
+                <span className="font-mono">{metrics.memory} MB</span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600">Active Users</span>
+                <span className="font-mono">{metrics.activeUsers}</span>
+              </div>
             </div>
-            <div className="flex gap-4 flex-wrap">
-              <button
-                type="button"
-                onClick={revalidateAllUsers}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors font-medium"
-              >
-                Revalidate All Users (user-*)
-              </button>
-              <button
-                type="button"
-                onClick={revalidateAllAdmins}
-                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors font-medium"
-              >
-                Revalidate All Admins (admin-*)
-              </button>
+
+            <div className="mt-4 bg-blue-50 text-blue-700 text-xs p-3 rounded-md">
+              ℹ️ configured with <code>expire: 2</code>. It will automatically
+              update data every 2 seconds when accessed.
             </div>
-          </div>
+
+            <Timestamp time={metrics.timestamp} />
+          </Card>
+
+          <Card title="System Alerts (On-Demand)">
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-slate-600">Status</span>
+              <Badge
+                variant={alerts.status === "Healthy" ? "success" : "warning"}
+              >
+                {alerts.status}
+              </Badge>
+            </div>
+
+            <p className="text-lg text-slate-800 mb-6 font-medium">
+              "{alerts.message}"
+            </p>
+
+            <form action={updateAlerts} className="mt-auto">
+              <button
+                type="submit"
+                className="w-full py-2 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium rounded-lg transition-colors shadow-sm cursor-pointer"
+              >
+                Update Alerts
+              </button>
+            </form>
+
+            <div className="mt-4 bg-slate-100 text-slate-600 text-xs p-3 rounded-md">
+              ℹ️ configured with <code>cacheLife("max")</code>. Updates only when
+              manually triggered.
+            </div>
+
+            <Timestamp time={alerts.timestamp} />
+          </Card>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6 border border-slate-200">
-          <h2 className="text-xl font-semibold text-slate-800 mb-4">Actions</h2>
-          <div className="flex gap-4">
-            <button
-              type="button"
-              onClick={delayed}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
-            >
-              Trigger Delayed Cache
-            </button>
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-slate-800">
+              User Management
+            </h2>
+            <form action={updateAllUsers}>
+              <button
+                type="submit"
+                className="text-sm px-3 py-1.5 bg-slate-800 text-white rounded-md hover:bg-slate-700 transition-colors cursor-pointer"
+              >
+                Update All Users
+              </button>
+            </form>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[user1, user2, user3].map((user) => {
+              const updateThisUser = updateUser.bind(null, user.id);
+              return (
+                <Card key={user.id} title={user.name}>
+                  <div className="space-y-3 mb-6">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 text-sm">Role</span>
+                      <span className="font-medium text-slate-800 text-sm">
+                        {user.role}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 text-sm">Last Seen</span>
+                      <span className="text-slate-800 text-sm">
+                        {new Date(user.lastSeen).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <form action={updateThisUser}>
+                    <button
+                      type="submit"
+                      className="w-full py-2 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium rounded-lg transition-colors text-sm cursor-pointer"
+                    >
+                      Update Profile
+                    </button>
+                  </form>
+
+                  <Timestamp time={user.timestamp} />
+                </Card>
+              );
+            })}
+          </div>
+
+          <div className="mt-6 bg-indigo-50/50 border border-indigo-100 p-4 rounded-lg text-sm text-indigo-900">
+            <p className="font-medium mb-1">💡 Cache Group Power</p>
+            <p>
+              Each user card is cached individually by ID. You can update one
+              user without affecting others. The "Update All" button uses the
+              group tag <code>dashboard.users.profile</code> to invalidate all
+              user profiles at once.
+            </p>
           </div>
         </div>
       </div>
-
-      <Link href="/sub" className="text-blue-500">
-        Subpage
-      </Link>
     </div>
   );
 }

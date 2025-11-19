@@ -1,12 +1,15 @@
 import { createCacheTag, createCacheTagGroup } from "next-cache-tools";
 
-export const byIdCacheKey = createCacheTag({
-  cacheKey: ({ id }: { id: string }) => id,
-});
+export const dashboardCache = createCacheTagGroup("dashboard", {
+  metrics: createCacheTag({
+    cacheKey: () => "metrics",
+  }),
+  alerts: createCacheTag({
+    cacheKey: () => "alerts",
+  }),
 
-export const cacheGroup = createCacheTagGroup("users", {
-  user: {
-    byId: createCacheTag({
+  users: {
+    profile: createCacheTag({
       cacheKey: ({ id }: { id: string }) => id,
     }),
   },
