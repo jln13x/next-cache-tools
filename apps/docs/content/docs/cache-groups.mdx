@@ -14,26 +14,26 @@ import { createCacheTag, createCacheTagGroup } from "next-cache-tools";
 
 export const cacheGroup = createCacheTagGroup("app", {
   users: {
-    byId: createCacheTag({
-      cacheKey: ({ id }: { id: string }) => id,
+    byId: createCacheTag("byId", {
+      getCacheId: ({ id }: { id: string }) => id,
     }),
-    byEmail: createCacheTag({
-      cacheKey: ({ email }: { email: string }) => email,
+    byEmail: createCacheTag("byEmail", {
+      getCacheId: ({ email }: { email: string }) => email,
     }),
   },
   posts: {
-    byId: createCacheTag({
-      cacheKey: ({ id }: { id: string }) => id,
+    byId: createCacheTag("byId", {
+      getCacheId: ({ id }: { id: string }) => id,
     }),
-    byAuthor: createCacheTag({
-      cacheKey: ({ authorId }: { authorId: string }) => authorId,
+    byAuthor: createCacheTag("byAuthor", {
+      getCacheId: ({ authorId }: { authorId: string }) => authorId,
     }),
     comments: {
-      byPostId: createCacheTag({
-        cacheKey: ({ postId }: { postId: string }) => postId,
+      byPostId: createCacheTag("byPostId", {
+        getCacheId: ({ postId }: { postId: string }) => postId,
       }),
-      byId: createCacheTag({
-        cacheKey: ({ id }: { id: string }) => id,
+      byId: createCacheTag("byId", {
+        getCacheId: ({ id }: { id: string }) => id,
       }),
     },
   },

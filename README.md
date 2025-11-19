@@ -29,8 +29,8 @@ pnpm install next-cache-tools
 ```typescript
 import { createCacheTag } from "next-cache-tools";
 
-const userTag = createCacheTag({
-  cacheKey: ({ id }: { id: string }) => id,
+const userTag = createCacheTag("user", {
+  getCacheId: ({ id }: { id: string }) => id,
 });
 
 async function getUser(id: string) {
@@ -50,8 +50,8 @@ import { createCacheTag, createCacheTagGroup } from "next-cache-tools";
 
 export const cacheGroup = createCacheTagGroup("app", {
   user: {
-    byId: createCacheTag({
-      cacheKey: ({ id }: { id: string }) => id,
+    byId: createCacheTag("byId", {
+      getCacheId: ({ id }: { id: string }) => id,
       // Optional cache life profile
       cacheLife: "minutes",
     }),

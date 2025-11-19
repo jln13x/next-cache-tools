@@ -21,8 +21,8 @@ npm i next-cache-tools
 ```typescript
 import { createCacheTag } from "next-cache-tools";
 
-const userTag = createCacheTag({
-  cacheKey: ({ id }: { id: string }) => id,
+const userTag = createCacheTag("user", {
+  getCacheId: ({ id }: { id: string }) => id,
 });
 
 async function getUser(id: string) {
@@ -34,12 +34,10 @@ async function getUser(id: string) {
 }
 ```
 
-When `cacheKey` doesn't require parameters, you can call `.tag()` without arguments:
+When `getCacheId` is not provided, the tag name is used as the cache ID and you can call `.tag()` without arguments:
 
 ```typescript
-const metricsTag = createCacheTag({
-  cacheKey: () => "metrics",
-});
+const metricsTag = createCacheTag("metrics");
 
 async function getMetrics() {
   "use cache";
@@ -103,11 +101,11 @@ import { createCacheTag, createCacheTagGroup } from "next-cache-tools";
 
 export const cacheGroup = createCacheTagGroup("users", {
   user: {
-    byId: createCacheTag({
-      cacheKey: ({ id }: { id: string }) => id,
+    byId: createCacheTag("byId", {
+      getCacheId: ({ id }: { id: string }) => id,
     }),
-    byEmail: createCacheTag({
-      cacheKey: ({ email }: { email: string }) => email,
+    byEmail: createCacheTag("byEmail", {
+      getCacheId: ({ email }: { email: string }) => email,
     }),
   },
 });

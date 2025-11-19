@@ -12,17 +12,61 @@ vi.mock("next/cache", () => ({
 
 describe("createCacheTag", () => {
   it("contains global tag", () => {
-    const tag = createCacheTag({
-      cacheKey: (id: string) => id,
+    const tag = createCacheTag("user", {
+      getCacheId: (id: string) => id,
     }) as any;
 
     expect(tag).toBeDefined();
     expect(tag.getTags()).toContain(GLOBAL_CACHE_TAG);
   });
 
+  it("works without getCacheId option", () => {
+    const tag = createCacheTag("metrics") as any;
+
+    expect(tag).toBeDefined();
+    expect(tag.getTags()).toContain(GLOBAL_CACHE_TAG);
+    expect(tag.getTags()).toContain(appendPrefix("metrics"));
+
+    vi.clearAllMocks();
+    tag.tag();
+    expect(cacheTag).toHaveBeenCalledWith(
+      GLOBAL_CACHE_TAG,
+      appendPrefix("metrics"),
+      appendPrefix("metrics"),
+    );
+  });
+
+  it("includes prefixed tag name when calling tag() on standalone tag", () => {
+    const userTag = createCacheTag("user") as any;
+
+    vi.clearAllMocks();
+    userTag.tag();
+    expect(cacheTag).toHaveBeenCalledWith(
+      GLOBAL_CACHE_TAG,
+      appendPrefix("user"),
+      appendPrefix("user"),
+    );
+  });
+
+  it("revalidates standalone tag with prefixed name", () => {
+    const userTag = createCacheTag("user") as any;
+
+    vi.clearAllMocks();
+    userTag.revalidate();
+    expect(revalidateTag).toHaveBeenCalledWith(appendPrefix("user"), "default");
+  });
+
+  it("updates standalone tag with prefixed name", () => {
+    const userTag = createCacheTag("user") as any;
+
+    vi.clearAllMocks();
+    userTag.update();
+    expect(updateTag).toHaveBeenCalledWith(appendPrefix("user"));
+  });
+
   it("revalidates and updates path tag when no options provided", () => {
-    const userTag = createCacheTag({
-      cacheKey: (id: string) => id,
+    const userTag = createCacheTag("user", {
+      getCacheId: (id: string) => id,
     }) as any;
 
     const group = createCacheTagGroup("users", {
@@ -44,8 +88,8 @@ describe("createCacheTag", () => {
   });
 
   it("handles filter option for revalidate and update", () => {
-    const userTag = createCacheTag({
-      cacheKey: (id: string) => id,
+    const userTag = createCacheTag("user", {
+      getCacheId: (id: string) => id,
     }) as any;
 
     const group = createCacheTagGroup("users", {
@@ -67,8 +111,8 @@ describe("createCacheTag", () => {
   });
 
   it("handles predicate matching multiple tags for revalidate and update", () => {
-    const userTag = createCacheTag({
-      cacheKey: (id: string) => id,
+    const userTag = createCacheTag("user", {
+      getCacheId: (id: string) => id,
     });
 
     const group = createCacheTagGroup("users", {
@@ -114,8 +158,8 @@ describe("createCacheTag", () => {
   });
 
   it("handles predicate matching nothing for revalidate and update", () => {
-    const userTag = createCacheTag({
-      cacheKey: (id: string) => id,
+    const userTag = createCacheTag("user", {
+      getCacheId: (id: string) => id,
     });
 
     const group = createCacheTagGroup("users", {
@@ -139,8 +183,8 @@ describe("createCacheTag", () => {
   });
 
   it("handles predicate when no tags have been created for revalidate and update", () => {
-    const userTag = createCacheTag({
-      cacheKey: (id: string) => id,
+    const userTag = createCacheTag("user", {
+      getCacheId: (id: string) => id,
     });
 
     const group = createCacheTagGroup("users", {
@@ -161,8 +205,8 @@ describe("createCacheTag", () => {
   });
 
   it("handles predicate with object arguments for revalidate and update", () => {
-    const categoryTag = createCacheTag({
-      cacheKey: ({ name }: { name: string }) => name,
+    const categoryTag = createCacheTag("category", {
+      getCacheId: ({ name }: { name: string }) => name,
     });
 
     const group = createCacheTagGroup("categories", {
@@ -202,8 +246,8 @@ describe("createCacheTag", () => {
   });
 
   it("handles predicate with complex conditions for revalidate and update", () => {
-    const userTag = createCacheTag({
-      cacheKey: ({ id }: { id: string }) => id,
+    const userTag = createCacheTag("user", {
+      getCacheId: ({ id }: { id: string }) => id,
     });
 
     const group = createCacheTagGroup("users", {
@@ -245,11 +289,11 @@ describe("createCacheTag", () => {
 
 describe("createCacheTagGroup", () => {
   it("checks tags of a group", () => {
-    const userTag = createCacheTag({
-      cacheKey: (id: string) => `user-${id}`,
+    const userTag = createCacheTag("user", {
+      getCacheId: (id: string) => `user-${id}`,
     }) as any;
-    const postTag = createCacheTag({
-      cacheKey: (id: string) => `post-${id}`,
+    const postTag = createCacheTag("post", {
+      getCacheId: (id: string) => `post-${id}`,
     }) as any;
 
     const userGroup = createCacheTagGroup("user", {
@@ -262,12 +306,51 @@ describe("createCacheTagGroup", () => {
     expect(userGroup.byId.getTags()).toEqual(
       expect.arrayContaining(["_nct_", `${appendPrefix("user")}:byId`]),
     );
+    expect(userGroup.byId.getTags()).not.toContain(appendPrefix("user"));
     expect(postGroup.tag.getTags()).toContain("_nct_");
+    expect(postGroup.tag.getTags()).not.toContain(appendPrefix("post"));
+  });
+
+  it("replaces standalone tag with group-prefixed tag when added to group", () => {
+    const metricsTag = createCacheTag("metrics") as any;
+
+    expect(metricsTag.getTags()).toContain(appendPrefix("metrics"));
+
+    const group = createCacheTagGroup("dashboard", {
+      metrics: metricsTag,
+    }) as any;
+
+    expect(group.metrics.getTags()).toContain(
+      `${appendPrefix("dashboard")}:metrics`,
+    );
+    expect(group.metrics.getTags()).not.toContain(appendPrefix("metrics"));
+  });
+
+  it("includes group prefix in nested structure tags", () => {
+    const profileTag = createCacheTag("profile", {
+      getCacheId: ({ id }: { id: string }) => id,
+    }) as any;
+
+    const group = createCacheTagGroup("dashboard", {
+      users: {
+        profile: profileTag,
+      },
+    }) as any;
+
+    vi.clearAllMocks();
+    group.users.profile.tag({ id: "123" });
+
+    expect(cacheTag).toHaveBeenCalledWith(
+      "_nct_",
+      `${appendPrefix("dashboard")}:users`,
+      `${appendPrefix("dashboard")}:users.profile`,
+      `${appendPrefix("dashboard")}:users.profile.123`,
+    );
   });
 
   it("includes path-based tags with arguments when calling tag()", () => {
-    const userTag = createCacheTag({
-      cacheKey: (id: string) => id,
+    const userTag = createCacheTag("user", {
+      getCacheId: (id: string) => id,
     }) as any;
 
     const group = createCacheTagGroup("users", {
@@ -284,8 +367,8 @@ describe("createCacheTagGroup", () => {
   });
 
   it("revalidates root and nested group tags", () => {
-    const userTag = createCacheTag({
-      cacheKey: (id: string) => `user-${id}`,
+    const userTag = createCacheTag("user", {
+      getCacheId: (id: string) => `user-${id}`,
     }) as any;
 
     const group = createCacheTagGroup("users", {
@@ -300,8 +383,8 @@ describe("createCacheTagGroup", () => {
     );
     expect(revalidateTag).toHaveBeenCalledTimes(1);
 
-    const postTag = createCacheTag({
-      cacheKey: (id: string) => `post-${id}`,
+    const postTag = createCacheTag("post", {
+      getCacheId: (id: string) => `post-${id}`,
     }) as any;
 
     const nestedGroup = createCacheTagGroup("main", {
@@ -321,14 +404,14 @@ describe("createCacheTagGroup", () => {
   });
 
   it("updates all tags in a group when calling update() on root group", () => {
-    const userByIdTag = createCacheTag({
-      cacheKey: (id: string) => id,
+    const userByIdTag = createCacheTag("userById", {
+      getCacheId: (id: string) => id,
     });
-    const userByEmailTag = createCacheTag({
-      cacheKey: (email: string) => email,
+    const userByEmailTag = createCacheTag("userByEmail", {
+      getCacheId: (email: string) => email,
     });
-    const postTag = createCacheTag({
-      cacheKey: (id: string) => id,
+    const postTag = createCacheTag("post", {
+      getCacheId: (id: string) => id,
     });
 
     const group = createCacheTagGroup("main", {
@@ -362,14 +445,14 @@ describe("createCacheTagGroup", () => {
   });
 
   it("updates all tags in a nested group when calling update() on nested group", () => {
-    const userByIdTag = createCacheTag({
-      cacheKey: (id: string) => id,
+    const userByIdTag = createCacheTag("userById", {
+      getCacheId: (id: string) => id,
     });
-    const userByEmailTag = createCacheTag({
-      cacheKey: (email: string) => email,
+    const userByEmailTag = createCacheTag("userByEmail", {
+      getCacheId: (email: string) => email,
     });
-    const postTag = createCacheTag({
-      cacheKey: (id: string) => id,
+    const postTag = createCacheTag("post", {
+      getCacheId: (id: string) => id,
     });
 
     const usersGroup = createCacheTagGroup("users", {
@@ -405,17 +488,17 @@ describe("createCacheTagGroup", () => {
   });
 
   it("updates all tags in deeply nested structure when calling update()", () => {
-    const userByIdTag = createCacheTag({
-      cacheKey: (id: string) => id,
+    const userByIdTag = createCacheTag("userById", {
+      getCacheId: (id: string) => id,
     });
-    const userByEmailTag = createCacheTag({
-      cacheKey: (email: string) => email,
+    const userByEmailTag = createCacheTag("userByEmail", {
+      getCacheId: (email: string) => email,
     });
-    const postByIdTag = createCacheTag({
-      cacheKey: (id: string) => id,
+    const postByIdTag = createCacheTag("postById", {
+      getCacheId: (id: string) => id,
     });
-    const commentTag = createCacheTag({
-      cacheKey: (id: string) => id,
+    const commentTag = createCacheTag("comment", {
+      getCacheId: (id: string) => id,
     });
 
     const commentsGroup = createCacheTagGroup("comments", {

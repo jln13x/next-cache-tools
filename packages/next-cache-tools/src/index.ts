@@ -18,10 +18,12 @@ type CustomProfile = {
 
 type CacheLifeProfile = BuiltInProfile | CustomProfile;
 
-type BaseOptions<T> =
-  | { filter: T; predicate?: never }
-  | { filter?: never; predicate: (args: T) => boolean }
-  | { filter?: never; predicate?: never };
+type BaseOptions<T> = [T] extends [undefined]
+  ? { filter?: never; predicate?: never }
+  :
+      | { filter: T; predicate?: never }
+      | { filter?: never; predicate: (args: T) => boolean }
+      | { filter?: never; predicate?: never };
 
 type RevalidateOptions<T> = BaseOptions<T> & {
   profile?: string | { expire?: number };
@@ -31,13 +33,17 @@ type LifeOptions = {
   profile?: CacheLifeProfile;
 };
 
-type ExtractTagArg<T extends (...args: any[]) => string> =
-  T extends () => string ? undefined : Parameters<T>[0];
+type ExtractTagArg<T extends ((...args: any[]) => string) | undefined> =
+  T extends undefined
+    ? undefined
+    : T extends () => string
+      ? undefined
+      : Parameters<Exclude<T, undefined>>[0];
 
 type CacheTagMethods<T> = {
-  tag: T extends undefined
+  tag: [T] extends [undefined]
     ? () => void
-    : T extends never
+    : [T] extends [never]
       ? () => void
       : (args: T) => void;
   life: (options?: LifeOptions) => void;
@@ -45,16 +51,16 @@ type CacheTagMethods<T> = {
   update: (options?: BaseOptions<T>) => void;
 };
 
-type CacheKeyFn<T = any> = T extends undefined
+type GetCacheIdFn<T = any> = T extends undefined
   ? () => string
   : (args: T) => string;
 
-type CreateCacheTagOptions<CacheKey extends CacheKeyFn<any> | (() => string)> =
-  {
-    cacheKey: CacheKey;
-    prefix?: string;
-    cacheLife?: CacheLifeProfile;
-  };
+type CreateCacheTagOptions<
+  GetCacheId extends GetCacheIdFn<any> | (() => string) | undefined,
+> = {
+  getCacheId?: GetCacheId;
+  cacheLife?: CacheLifeProfile;
+};
 
 type CacheTag<T = any> = CacheTagMethods<T>;
 
@@ -63,21 +69,30 @@ class _CacheTag<T = any> {
   private prefix?: string;
   private cacheKeyToArgs = new Map<string, T>();
   private defaultCacheLife?: CacheLifeProfile;
+  private name: string;
 
   constructor(
+    name: string,
     private tags: string[] = [],
     private options: {
-      cacheKey: CacheKeyFn<T>;
-      prefix?: string;
+      getCacheId?: GetCacheIdFn<T>;
       cacheLife?: CacheLifeProfile;
     },
   ) {
+    this.name = name;
     this.defaultCacheLife = options.cacheLife;
   }
 
   setPath(path: string[], prefix?: string): void {
     this.path = path;
     this.prefix = prefix;
+
+    const standaloneTag = appendPrefix(this.name);
+    const standaloneTagIndex = this.tags.indexOf(standaloneTag);
+    if (standaloneTagIndex !== -1) {
+      this.tags.splice(standaloneTagIndex, 1);
+    }
+
     for (let i = 0; i < path.length; i++) {
       const pathTag = path.slice(0, i + 1).join(".");
       const prefixedTag = prefix ? `${prefix}:${pathTag}` : pathTag;
@@ -90,19 +105,29 @@ class _CacheTag<T = any> {
   }
 
   private prefixTag(tag: string): string {
-    return this.prefix ? `${this.prefix}:${tag}` : tag;
+    if (this.prefix) {
+      return `${this.prefix}:${tag}`;
+    }
+    return appendPrefix(tag);
   }
 
   tag(...args: T extends undefined ? [] : [T]): void {
     const tagsToUse = [...this.tags];
     const fullPathKey = this.path.join(".");
-    const cacheKey =
-      args.length === 0
-        ? (this.options.cacheKey as () => string)()
-        : (this.options.cacheKey as (args: T) => string)(args[0]);
+
+    let cacheKey: string;
+    if (this.options.getCacheId) {
+      cacheKey =
+        args.length === 0
+          ? (this.options.getCacheId as () => string)()
+          : (this.options.getCacheId as (args: T) => string)(args[0]);
+    } else {
+      cacheKey = this.name;
+    }
+
     const finalTag = fullPathKey ? [fullPathKey, cacheKey].join(".") : cacheKey;
 
-    if (args.length > 0) {
+    if (args.length > 0 && this.options.getCacheId) {
       this.cacheKeyToArgs.set(cacheKey, args[0] as T);
     }
 
@@ -126,7 +151,7 @@ class _CacheTag<T = any> {
       const predicate = options.predicate;
       for (const [cacheKey, args] of this.cacheKeyToArgs) {
         if (predicate(args)) {
-          const tag = [pathKey, cacheKey].join(".");
+          const tag = pathKey ? [pathKey, cacheKey].join(".") : cacheKey;
           revalidateTag(this.prefixTag(tag), profile);
         }
       }
@@ -134,13 +159,16 @@ class _CacheTag<T = any> {
     }
 
     if (options?.filter) {
-      const key = this.options.cacheKey(options.filter);
-      const tag = [pathKey, key].join(".");
+      const key = this.options.getCacheId
+        ? this.options.getCacheId(options.filter)
+        : this.name;
+      const tag = pathKey ? [pathKey, key].join(".") : key;
       revalidateTag(this.prefixTag(tag), profile);
       return;
     }
 
-    revalidateTag(this.prefixTag(pathKey), profile);
+    const tagToRevalidate = pathKey || this.name;
+    revalidateTag(this.prefixTag(tagToRevalidate), profile);
   }
 
   update(options?: BaseOptions<T>): void {
@@ -149,7 +177,7 @@ class _CacheTag<T = any> {
       const pathKey = this.path.join(".");
       for (const [cacheKey, args] of this.cacheKeyToArgs) {
         if (predicate(args)) {
-          const tag = [pathKey, cacheKey].join(".");
+          const tag = pathKey ? [pathKey, cacheKey].join(".") : cacheKey;
           updateTag(this.prefixTag(tag));
         }
       }
@@ -157,15 +185,18 @@ class _CacheTag<T = any> {
     }
 
     if (options?.filter) {
-      const key = this.options.cacheKey(options.filter);
+      const key = this.options.getCacheId
+        ? this.options.getCacheId(options.filter)
+        : this.name;
       const pathKey = this.path.join(".");
-      const tag = [pathKey, key].join(".");
+      const tag = pathKey ? [pathKey, key].join(".") : key;
       updateTag(this.prefixTag(tag));
       return;
     }
 
     const pathKey = this.path.join(".");
-    updateTag(this.prefixTag(pathKey));
+    const tagToUpdate = pathKey || this.name;
+    updateTag(this.prefixTag(tagToUpdate));
   }
 
   getTags(): string[] {
@@ -173,13 +204,16 @@ class _CacheTag<T = any> {
   }
 }
 
-function createCacheTag<T extends CacheKeyFn<any> | (() => string)>(
-  options: CreateCacheTagOptions<T>,
+function createCacheTag<
+  T extends GetCacheIdFn<any> | (() => string) | undefined = undefined,
+>(
+  name: string,
+  options?: CreateCacheTagOptions<T>,
 ): CacheTag<ExtractTagArg<T>> {
-  const tags: string[] = [GLOBAL_CACHE_TAG];
-  return new _CacheTag<ExtractTagArg<T>>(tags, {
-    cacheKey: options.cacheKey as any,
-    cacheLife: options.cacheLife,
+  const tags: string[] = [GLOBAL_CACHE_TAG, appendPrefix(name)];
+  return new _CacheTag<ExtractTagArg<T>>(name, tags, {
+    getCacheId: options?.getCacheId as any,
+    cacheLife: options?.cacheLife,
   }) as unknown as CacheTag<ExtractTagArg<T>>;
 }
 

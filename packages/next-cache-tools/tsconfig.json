@@ -1,5 +1,5 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["src", "test", "test/cache-tag.test.ts"],
+  "include": ["src", "test/*.ts"],
   "compilerOptions": {}
 }

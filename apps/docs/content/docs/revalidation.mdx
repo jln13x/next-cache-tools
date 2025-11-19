@@ -12,8 +12,8 @@ Use `filter` to target a specific cache entry by providing the same arguments us
 ```typescript
 import { createCacheTag } from "next-cache-tools";
 
-const userTag = createCacheTag({
-  cacheKey: ({ id }: { id: string }) => id,
+const userTag = createCacheTag("user", {
+  getCacheId: ({ id }: { id: string }) => id,
 });
 
 async function getUser(id: string) {
@@ -43,8 +43,8 @@ Use `predicate` to target multiple cache entries that match a condition:
 ```typescript
 import { createCacheTag } from "next-cache-tools";
 
-const userTag = createCacheTag({
-  cacheKey: ({ id }: { id: string }) => id,
+const userTag = createCacheTag("user", {
+  getCacheId: ({ id }: { id: string }) => id,
 });
 
 async function getUser(id: string) {
@@ -99,11 +99,11 @@ import { createCacheTag, createCacheTagGroup } from "next-cache-tools";
 
 const cacheGroup = createCacheTagGroup("app", {
   users: {
-    byId: createCacheTag({
-      cacheKey: ({ id }: { id: string }) => id,
+    byId: createCacheTag("byId", {
+      getCacheId: ({ id }: { id: string }) => id,
     }),
-    byEmail: createCacheTag({
-      cacheKey: ({ email }: { email: string }) => email,
+    byEmail: createCacheTag("byEmail", {
+      getCacheId: ({ email }: { email: string }) => email,
     }),
   },
 });

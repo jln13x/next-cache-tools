@@ -14,7 +14,7 @@
         "dev:tailwind": "npx @tailwindcss/cli -i ./src/devtools/index.css -o ./dist/devtools/index.css --watch",
         "dev": "tsdown --watch",
         "lint": "tsc --noEmit",
-        "test": "vitest",
+        "test": "vitest --typecheck",
         "test:run": "vitest run",
         "test:ui": "vitest --ui"
     },

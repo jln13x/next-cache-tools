@@ -10,8 +10,24 @@ description: Create and manage cache tags with automatic lifecycle management
 ```typescript
 import { createCacheTag } from "next-cache-tools";
 
-const userTag = createCacheTag({
-  cacheKey: ({ id }: { id: string }) => id,
+const usersListTag = createCacheTag("users-list");
+
+async function getUsers() {
+  "use cache";
+  
+  usersListTag.tag();
+  
+  return [{ id: "1", name: "User 1" }, { id: "2", name: "User 2" }];
+}
+```
+
+## Dynamic Cache Tags
+
+For cache tags that need to handle dynamic parameters (like user IDs, slugs, etc.), use `getCacheId` to generate unique cache keys:
+
+```typescript
+const userTag = createCacheTag("user", {
+  getCacheId: ({ id }: { id: string }) => id,
 });
 
 async function getUser(id: string) {
@@ -23,6 +39,41 @@ async function getUser(id: string) {
 }
 ```
 
+The `getCacheId` function **receives** the arguments passed to `.tag()` and returns a string that uniquely identifies this cache entry. 
+
+## Revalidation & Updates
+
+You can invalidate or update cached data using `.revalidate()` and `.update()` methods:
+
+```typescript
+const userTag = createCacheTag("user", {
+  getCacheId: ({ id }: { id: string }) => id,
+});
+
+// Revalidate all user cache entries
+userTag.revalidate();
+
+// Revalidate a specific user
+userTag.revalidate({ filter: { id: "user-123" } });
+
+// Update a specific user
+userTag.update({ filter: { id: "user-123" } });
+```
+
+For tags without `getCacheId`, you can revalidate or update the entire tag:
+
+```typescript
+const usersListTag = createCacheTag("users-list");
+
+// Revalidate the entire users list cache
+usersListTag.revalidate();
+
+// Update the entire users list cache
+usersListTag.update();
+```
+
+Both methods support `filter` and `predicate` options for selective operations. See [Revalidation & Updates](/docs/revalidation) for detailed examples.
+
 ## Cache Life
 
 ### Setting a Default Profile
@@ -31,8 +82,8 @@ async function getUser(id: string) {
 You can set a default cache life profile when creating the tag:
 
 ```typescript
-const userTag = createCacheTag({
-  cacheKey: ({ id }: { id: string }) => id,
+const userTag = createCacheTag("user", {
+  getCacheId: ({ id }: { id: string }) => id,
   cacheLife: "max", // Default profile for this tag
 });
 ```
@@ -56,8 +107,8 @@ async function getUser(id: string) {
 You can override the default cache life by calling `.life()` explicitly after `.tag()`:
 
 ```typescript
-const userTag = createCacheTag({
-  cacheKey: ({ id }: { id: string }) => id,
+const userTag = createCacheTag("user", {
+  getCacheId: ({ id }: { id: string }) => id,
   cacheLife: "default", // Default profile
 });
 
