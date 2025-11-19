@@ -1,4 +1,4 @@
-import { _tag } from "./cache-handler";
+import { getCacheHandler } from "./get-cache-handler";
 
 export interface TagData {
   key: string;
@@ -10,28 +10,10 @@ export interface TagData {
   data?: unknown;
 }
 
-async function getInMemoryTags(): Promise<Map<string, TagData[]>> {
-  const tagMap = new Map<string, TagData[]>();
+async function getInMemoryTags(): Promise<TagData[]> {
+  const entries: TagData[] = [];
 
-  // Get entries from Next.js cache handler (from global symbol)
-  const handlersMapSymbol = Symbol.for("@next/cache-handlers-map");
-  const handlersMap = (globalThis as any)[handlersMapSymbol] as
-    | Map<string, any>
-    | undefined;
-
-  if (!handlersMap) {
-    throw new Error(
-      "next-cache-tools: Cache handlers not initialized. Make sure you have registered the cache handler with Next.js.",
-    );
-  }
-
-  const handler = handlersMap.get("default");
-
-  if (handler._tag !== _tag) {
-    throw new Error(
-      "next-cache-tools: The cache handler registered with Next.js is not the next-cache-tools handler. Please ensure you have properly configured next-cache-tools.",
-    );
-  }
+  const handler = getCacheHandler();
 
   const cacheEntries = handler.getCacheEntries();
 
@@ -97,22 +79,33 @@ async function getInMemoryTags(): Promise<Map<string, TagData[]>> {
         }
       }
 
-      // Add entry to tags
-      for (const tag of tagData.tags) {
-        if (!tagMap.has(tag)) {
-          tagMap.set(tag, []);
-        }
-        const tagEntries = tagMap.get(tag);
-        if (tagEntries) {
-          tagEntries.push(tagData);
-        }
-      }
+      entries.push(tagData);
     }
   }
 
-  return tagMap;
+  const deduplicatedMap = new Map<string, TagData>();
+
+  for (const entry of entries) {
+    try {
+      const keyParts = JSON.parse(entry.key) as unknown[];
+      if (Array.isArray(keyParts) && keyParts.length >= 3) {
+        const groupKey = JSON.stringify([keyParts[1], keyParts[2]]);
+
+        const existing = deduplicatedMap.get(groupKey);
+        if (!existing || entry.timestamp > existing.timestamp) {
+          deduplicatedMap.set(groupKey, entry);
+        }
+      } else {
+        deduplicatedMap.set(entry.key, entry);
+      }
+    } catch {
+      deduplicatedMap.set(entry.key, entry);
+    }
+  }
+
+  return Array.from(deduplicatedMap.values());
 }
 
-export const getAllCacheTags = async (): Promise<Map<string, TagData[]>> => {
+export const getAllCacheTags = async (): Promise<TagData[]> => {
   return getInMemoryTags();
 };

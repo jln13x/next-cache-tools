@@ -1,6 +1,7 @@
 "use server";
 
 import { refresh, revalidateTag, updateTag } from "next/cache";
+import { getCacheHandler } from "./get-cache-handler";
 import { getAllCacheTags } from "./get-cache-tags";
 
 export async function revalidateTagAction(tag: string) {
@@ -16,21 +17,21 @@ export async function refreshAction() {
 }
 
 export async function clearCacheAction() {
-  const handlersMapSymbol = Symbol.for("@next/cache-handlers-map");
-  const handlersMap = (globalThis as any)[handlersMapSymbol] as
-    | Map<string, any>
-    | undefined;
-
-  if (!handlersMap) {
-    throw new Error(
-      "next-cache-tools: Cache handlers not initialized. Make sure you have registered the cache handler with Next.js.",
-    );
-  }
-  handlersMap.get("default")?.clear();
+  getCacheHandler().clear();
 }
 
 export async function fetchCacheTagsAction() {
-  const tagMap = await getAllCacheTags();
+  const entries = await getAllCacheTags();
+
+  const tagMap = new Map<string, TagData[]>();
+  for (const entry of entries) {
+    for (const tag of entry.tags) {
+      if (!tagMap.has(tag)) {
+        tagMap.set(tag, []);
+      }
+      tagMap.get(tag)!.push(entry);
+    }
+  }
 
   const tagsArray = Array.from(tagMap.entries())
     .map(([tag, data]) => ({ tag, data }))
