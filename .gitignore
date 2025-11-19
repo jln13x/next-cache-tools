@@ -20,7 +20,7 @@ node_modules
 # production
 build
 
-# misc
+# miscx
 .DS_Store
 *.pem
 
@@ -44,4 +44,7 @@ dist
 
 .turbo
 
+
 next.js
+
+*vitest-temp*
