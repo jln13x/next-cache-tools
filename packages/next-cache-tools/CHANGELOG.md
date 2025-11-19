@@ -1,5 +1,12 @@
 # next-cache-tools
 
+## 0.0.6
+
+### Patch Changes
+
+- d129e62: release
+- 45418d1: release
+
 ## 0.0.5
 
 ### Patch Changes
