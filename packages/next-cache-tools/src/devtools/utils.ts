@@ -24,13 +24,18 @@ export function formatDuration(value: number): string {
   return `${secs} ${secs === 1 ? "second" : "seconds"}`;
 }
 
-export function formatTagForDisplay(tag: string): string {
+export function formatTagForDisplay(tag: string, groupName?: string): string {
   const colonIndex = tag.indexOf(":");
   if (colonIndex === -1) {
     return hasPrefix(tag) ? stripPrefix(tag) : tag;
   }
   const groupPart = tag.substring(0, colonIndex);
   const rest = tag.substring(colonIndex + 1);
+
+  if (groupName) {
+    return rest;
+  }
+
   return hasPrefix(groupPart)
     ? `${stripPrefix(groupPart)}:${rest}`
     : tag.substring(colonIndex + 1);

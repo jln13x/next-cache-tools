@@ -447,7 +447,7 @@ function TagPreview({
             )}
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-white m-0 text-2xl font-bold">
-                {formatTagForDisplay(selectedTag)}
+                {formatTagForDisplay(selectedTag, groupName || undefined)}
               </h3>
               {invalidatedTags.has(selectedTag) && <InvalidatedIcon />}
               {isTagOutdated({ tag: selectedTag, data: tagData.data }) && (
@@ -549,6 +549,7 @@ export function Tag({
   onClick,
   currentTime,
   isOutdated,
+  groupName,
 }: {
   tag: string;
   data: TagData[];
@@ -557,6 +558,7 @@ export function Tag({
   onClick: () => void;
   currentTime: number;
   isOutdated?: boolean;
+  groupName?: string;
 }) {
   const entryCounts = getEntryCounts(data, currentTime);
 
@@ -568,7 +570,7 @@ export function Tag({
     >
       <div className="flex items-center gap-2 flex-wrap">
         <code className="bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded flex-1 flex items-center gap-2 justify-between">
-          {formatTagForDisplay(tag)}
+          {formatTagForDisplay(tag, groupName)}
           <div className="flex items-center gap-1.5 flex-wrap">
             {entryCounts.fresh > 0 && (
               <BadgeWithCount type="fresh" count={entryCounts.fresh} />

@@ -76,6 +76,7 @@ export function TagGroup({
                   onClick={() => onTagSelect(tag)}
                   currentTime={currentTime}
                   isOutdated={isTagOutdated({ tag, data })}
+                  groupName={groupName}
                 />
               </li>
             ))}
