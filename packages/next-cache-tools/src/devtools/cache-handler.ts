@@ -35,6 +35,8 @@ type PrivateCacheEntry = {
 };
 
 function createDefaultCacheHandler(maxSize: number): CacheHandler {
+  let version: number | undefined;
+
   // If the max size is 0, return a cache handler that doesn't cache anything,
   // this avoids an unnecessary LRUCache instance and potential memory
   // allocation.
@@ -118,6 +120,7 @@ function createDefaultCacheHandler(maxSize: number): CacheHandler {
     },
 
     async set(cacheKey, pendingEntry) {
+      version = Number(JSON.parse(cacheKey).at(-1));
       debug?.("set", cacheKey, "start");
 
       let resolvePending: () => void = () => {};
@@ -209,6 +212,10 @@ function createDefaultCacheHandler(maxSize: number): CacheHandler {
 
     clear() {
       memoryCache.cache.clear();
+    },
+
+    getVersion() {
+      return version;
     },
   } as CacheHandler;
 

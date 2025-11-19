@@ -24,5 +24,6 @@ export function getCacheHandler() {
   return defaultHandler as CacheHandler & {
     getCacheEntries: () => any;
     clear: () => void;
+    getVersion: () => number | undefined;
   };
 }
