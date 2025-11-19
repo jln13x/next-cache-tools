@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { CacheTagsPanel } from "./cache-tags-panel";
 import type { TagData } from "./get-cache-tags";
 import { getAllCacheTags } from "./get-cache-tags";
-
 import "./index.css";
 
 interface TagWithData {
@@ -23,9 +22,20 @@ export async function CacheDevTools() {
 }
 
 async function Devtools() {
-  const tagMap = await getAllCacheTags();
+  const entries = await getAllCacheTags();
+
+  const tagMap = new Map<string, TagData[]>();
+  for (const entry of entries) {
+    for (const tag of entry.tags) {
+      if (!tagMap.has(tag)) {
+        tagMap.set(tag, []);
+      }
+      tagMap.get(tag)!.push(entry);
+    }
+  }
+
   const tagsArray: TagWithData[] = Array.from(tagMap.entries())
-    .map(([tag, data]: [string, TagData[]]) => ({ tag, data }))
+    .map(([tag, data]) => ({ tag, data }))
     .sort((a, b) => a.tag.localeCompare(b.tag));
 
   return <CacheTagsPanel initialTags={tagsArray} />;

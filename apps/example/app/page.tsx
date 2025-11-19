@@ -38,6 +38,16 @@ async function getSystemAlerts() {
   };
 }
 
+async function getSystemAlerts2() {
+  "use cache";
+  dashboardCache.alerts.tag();
+  dashboardCache.alerts.life({ profile: "max" });
+
+  return {
+    status: "Healthy",
+  };
+}
+
 async function getUserProfile(id: string) {
   "use cache";
   dashboardCache.users.profile.tag({ id });
@@ -152,6 +162,7 @@ function Timestamp({ time }: { time: number }) {
 export default async function DashboardPage() {
   const metrics = await getMetrics();
   const alerts = await getSystemAlerts();
+  const alerts2 = await getSystemAlerts2();
   const external = await getExternalData();
   const user1 = await getUserProfile("user-1");
   const user2 = await getUserProfile("user-2");
@@ -167,7 +178,7 @@ export default async function DashboardPage() {
             </h1>
             <p className="text-slate-500 mt-2">
               Demonstrating Next.js Cache Tools with granular invalidation
-              strategies.
+              strategies.ss
             </p>
           </div>
           <div className="text-right">
@@ -179,6 +190,8 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {JSON.stringify(alerts2)}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card title="Live Metrics (Auto-Refresh)">
