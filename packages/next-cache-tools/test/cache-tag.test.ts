@@ -1,4 +1,4 @@
-import { cacheTag, revalidateTag, updateTag } from "next/cache";
+import { cacheLife, cacheTag, revalidateTag, updateTag } from "next/cache";
 import { describe, expect, it, vi } from "vitest";
 import { createCacheTag, createCacheTagGroup } from "../src/index";
 import { appendPrefix, GLOBAL_CACHE_TAG } from "../src/shared";
@@ -62,6 +62,53 @@ describe("createCacheTag", () => {
     vi.clearAllMocks();
     userTag.update();
     expect(updateTag).toHaveBeenCalledWith(appendPrefix("user"));
+  });
+
+  it("uses cacheLife profile passed when creating tag", () => {
+    const userTag = createCacheTag("user", {
+      getCacheId: (id: string) => id,
+      cacheLife: "max",
+    }) as any;
+
+    vi.clearAllMocks();
+    userTag.tag("123");
+    expect(cacheLife).toHaveBeenCalledWith("max");
+  });
+
+  it("uses custom cacheLife profile passed when creating tag", () => {
+    const customProfile = {
+      stale: 5,
+      revalidate: 60,
+      expire: 300,
+    };
+    const userTag = createCacheTag("user", {
+      getCacheId: (id: string) => id,
+      cacheLife: customProfile,
+    }) as any;
+
+    vi.clearAllMocks();
+    userTag.tag("123");
+    expect(cacheLife).toHaveBeenCalledWith(customProfile);
+  });
+
+  it("uses default cacheLife profile when none is provided", () => {
+    const userTag = createCacheTag("user", {
+      getCacheId: (id: string) => id,
+    }) as any;
+
+    vi.clearAllMocks();
+    userTag.tag("123");
+    expect(cacheLife).toHaveBeenCalledWith("default");
+  });
+
+  it("uses cacheLife profile for tags without getCacheId", () => {
+    const metricsTag = createCacheTag("metrics", {
+      cacheLife: "hours",
+    }) as any;
+
+    vi.clearAllMocks();
+    metricsTag.tag();
+    expect(cacheLife).toHaveBeenCalledWith("hours");
   });
 
   it("revalidates and updates path tag when no options provided", () => {

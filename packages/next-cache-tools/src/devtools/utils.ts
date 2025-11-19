@@ -1,3 +1,4 @@
+import { hasPrefix, stripPrefix } from "../shared";
 import type { TagData } from "./get-cache-tags";
 
 export interface TagWithData {
@@ -25,8 +26,14 @@ export function formatDuration(value: number): string {
 
 export function formatTagForDisplay(tag: string): string {
   const colonIndex = tag.indexOf(":");
-  if (colonIndex === -1) return tag;
-  return tag.substring(colonIndex + 1);
+  if (colonIndex === -1) {
+    return hasPrefix(tag) ? stripPrefix(tag) : tag;
+  }
+  const groupPart = tag.substring(0, colonIndex);
+  const rest = tag.substring(colonIndex + 1);
+  return hasPrefix(groupPart)
+    ? `${stripPrefix(groupPart)}:${rest}`
+    : tag.substring(colonIndex + 1);
 }
 
 export function formatTimestamp(timestamp: number): string {

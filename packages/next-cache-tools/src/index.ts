@@ -225,10 +225,6 @@ type GroupMethods = {
 type CacheTagGroup<T extends Record<string, CacheTag | CacheTagGroup<any>>> =
   T & GroupMethods;
 
-type CreateCacheTagGroupOptions = {
-  prefix?: string;
-};
-
 function collectAllTags(
   group: Record<string, CacheTag | CacheTagGroup<any>>,
 ): CacheTag[] {
@@ -253,17 +249,10 @@ function addPathTags(tag: _CacheTag, path: string[], prefix?: string): void {
   tag.setPath(path, prefix);
 }
 
-function createCacheTagGroup<
+function _createCacheTagGroup<
   T extends Record<string, CacheTag | CacheTagGroup<any>>,
->(
-  name: string,
-  group: T,
-  options?: CreateCacheTagGroupOptions,
-  path: string[] = [],
-  rootGroupName?: string,
-): CacheTagGroup<T> {
-  const actualRootGroupName = rootGroupName ?? name;
-  const prefixedGroupName = appendPrefix(actualRootGroupName);
+>(group: T, path: string[], rootGroupName: string): CacheTagGroup<T> {
+  const prefixedGroupName = appendPrefix(rootGroupName);
   const processedGroup: Record<string, CacheTag | CacheTagGroup<any>> = {};
 
   for (const [key, value] of Object.entries(group)) {
@@ -272,12 +261,10 @@ function createCacheTagGroup<
       addPathTags(value, currentPath, prefixedGroupName);
       processedGroup[key] = value;
     } else if (typeof value === "object" && value !== null) {
-      processedGroup[key] = createCacheTagGroup(
-        key,
+      processedGroup[key] = _createCacheTagGroup(
         value as Record<string, CacheTag | CacheTagGroup<any>>,
-        options,
         currentPath,
-        actualRootGroupName,
+        rootGroupName,
       );
     }
   }
@@ -300,6 +287,12 @@ function createCacheTagGroup<
   };
 
   return Object.assign(processedGroup, groupMethods) as CacheTagGroup<T>;
+}
+
+function createCacheTagGroup<
+  T extends Record<string, CacheTag | CacheTagGroup<any>>,
+>(name: string, group: T): CacheTagGroup<T> {
+  return _createCacheTagGroup(group, [], name);
 }
 
 export { createCacheTag, createCacheTagGroup };
