@@ -11,8 +11,8 @@
         "cs": "changeset",
         "release": "pnpm build && changeset publish",
         "lint": "turbo run lint --filter=\"next-cache-tools\" --filter=\"@next-cache-tools*\"",
-        "build": "turbo run build --filter=\"next-cache-tools\" --filter=\"@next-cache-tools*\""
-        
+        "build": "turbo run build --filter=\"next-cache-tools\" --filter=\"@next-cache-tools*\"",
+        "test": "turbo run test --filter=\"next-cache-tools\" --filter=\"@next-cache-tools*\""
     },
     "devDependencies": {
         "@biomejs/biome": "2.2.0",
