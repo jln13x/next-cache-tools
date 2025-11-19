@@ -1,5 +1,12 @@
 # next-cache-tools
 
+## 0.0.4
+
+### Patch Changes
+
+- fbae844: release
+- abe3781: release
+
 ## 0.0.3
 
 ### Patch Changes
