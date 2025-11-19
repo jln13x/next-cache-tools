@@ -10,8 +10,7 @@ export function baseOptions(): BaseLayoutProps {
     },
     links: [
       {
-        icon: "⚙️",
-        text: "Report a Bug",
+        text: "Contact the Dev",
         url: "https://x.com/jlndev",
       },
     ],
