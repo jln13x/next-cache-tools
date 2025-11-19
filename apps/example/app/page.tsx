@@ -1,4 +1,4 @@
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag, revalidateTag } from "next/cache";
 import { dashboardCache } from "./cache";
 
 async function getMetrics() {
@@ -64,6 +64,19 @@ async function getUserProfile(id: string) {
   };
 }
 
+async function getExternalData() {
+  "use cache";
+  cacheTag("external", "api-data");
+  cacheLife({ expire: 10 });
+
+  return {
+    source: "External API",
+    version: "1.2.3",
+    status: "operational",
+    timestamp: Date.now(),
+  };
+}
+
 async function updateAlerts() {
   "use server";
   dashboardCache.alerts.update();
@@ -77,6 +90,11 @@ async function updateUser(id: string) {
 async function updateAllUsers() {
   "use server";
   dashboardCache.users.profile.update();
+}
+
+async function updateExternal() {
+  "use server";
+  revalidateTag("external");
 }
 
 function Card({
@@ -134,6 +152,7 @@ function Timestamp({ time }: { time: number }) {
 export default async function DashboardPage() {
   const metrics = await getMetrics();
   const alerts = await getSystemAlerts();
+  const external = await getExternalData();
   const user1 = await getUserProfile("user-1");
   const user2 = await getUserProfile("user-2");
   const user3 = await getUserProfile("user-3");
@@ -161,7 +180,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card title="Live Metrics (Auto-Refresh)">
             <div className="space-y-4 mb-4">
               <div className="flex justify-between items-center">
@@ -227,6 +246,45 @@ export default async function DashboardPage() {
             </div>
 
             <Timestamp time={alerts.timestamp} />
+          </Card>
+
+          <Card title="External API (Native Next.js)">
+            <div className="space-y-4 mb-4">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600">Source</span>
+                <span className="font-medium text-slate-900">
+                  {external.source}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600">Version</span>
+                <span className="font-mono text-slate-900">
+                  {external.version}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600">Status</span>
+                <Badge variant="success">{external.status}</Badge>
+              </div>
+            </div>
+
+            <form action={updateExternal} className="mt-auto">
+              <button
+                type="submit"
+                className="w-full py-2 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium rounded-lg transition-colors shadow-sm cursor-pointer"
+              >
+                Update External
+              </button>
+            </form>
+
+            <div className="mt-4 bg-green-50 text-green-700 text-xs p-3 rounded-md">
+              ℹ️ Uses native <code>cacheTag()</code> and <code>cacheLife()</code>{" "}
+              from Next.js. Also visible in devtools.
+            </div>
+
+            <Timestamp time={external.timestamp} />
           </Card>
         </div>
 
