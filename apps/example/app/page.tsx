@@ -94,7 +94,7 @@ async function updateAllUsers() {
 
 async function updateExternal() {
   "use server";
-  revalidateTag("external");
+  revalidateTag("external", "default");
 }
 
 function Card({
