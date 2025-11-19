@@ -27,7 +27,7 @@ type RevalidateOptions<T> = BaseOptions<T> & {
   profile?: string | { expire?: number };
 };
 
-type LifeOptions<T> = BaseOptions<T> & {
+type LifeOptions = {
   profile?: CacheLifeProfile;
 };
 
@@ -40,7 +40,7 @@ type CacheTagMethods<T> = {
     : T extends never
       ? () => void
       : (args: T) => void;
-  life: (options?: LifeOptions<T>) => void;
+  life: (options?: LifeOptions) => void;
   revalidate: (options?: RevalidateOptions<T>) => void;
   update: (options?: BaseOptions<T>) => void;
 };
@@ -111,7 +111,7 @@ class _CacheTag<T = any> {
     this.life();
   }
 
-  life(_options?: LifeOptions<T>): void {
+  life(_options?: LifeOptions): void {
     const profile: CacheLifeProfile =
       _options?.profile ?? this.defaultCacheLife ?? "default";
     cacheLife(profile as any);
