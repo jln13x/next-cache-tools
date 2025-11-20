@@ -12,7 +12,7 @@ Manage cache tags in Next.js with type safety, grouping, and developer tools.
 - **Typesafe cache tag management**
 - **Organize tags in nested structures**
 - **Fine-grained cache revalidation & updates**
-- **Devtools to visualize the your cache**
+- **Devtools to visualize your cache**
 
 [Documentation »](https://next-cache-tools.com/)
 
