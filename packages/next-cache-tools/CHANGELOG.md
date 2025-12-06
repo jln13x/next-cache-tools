@@ -1,5 +1,11 @@
 # next-cache-tools
 
+## 0.0.7
+
+### Patch Changes
+
+- bd537ac: release
+
 ## 0.0.6
 
 ### Patch Changes
